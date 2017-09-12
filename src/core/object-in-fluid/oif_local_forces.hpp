@@ -57,10 +57,17 @@ inline int calc_oif_local(Particle *p2, Particle *p1, Particle *p3, Particle *p4
 	double AA[3],BB[3],CC[3];
     double n1[3],n2[3],dn1,dn2,phi,aa;
     double dx[3],fac,dr,len2,len,lambda;
-    double A,h[3],rh[3],hn;
+    double A,A1,A2,h[3],rh[3],hn,h1[3],h2[3],h3[3],h4[3];
+    double v1,v2,footC[3],footD[3];
     double m1[3],m2[3],m3[3];
     double v[3], len_new, len_old, def_vel;
     double m1_length,m2_length,m3_length,t;
+
+    // variables for sanity check
+    double Aforce[3],Bforce[3],Cforce[3],Dforce[3];
+    double Atorque[3],Btorque[3],Ctorque[3],Dtorque[3];
+    double centroid[3],AtoCentroid[3],BtoCentroid[3],CtoCentroid[3],DtoCentroid[3];
+    double check_force[3],check_torque[3];
 
 	#ifdef GHOST_FLAG
 	// first find out which particle out of p1, p2 (possibly p3, p4) is not a ghost particle. In almost all cases it is p2, however, it might be other one. we call this particle reference particle.
@@ -228,8 +235,9 @@ inline int calc_oif_local(Particle *p2, Particle *p1, Particle *p3, Particle *p4
     }
     
     /* bending
-       forceT1 is restoring force for triangle p1,p2,p3 and force2T restoring force for triangle p2,p3,p4
-       p1 += forceT1; p2 -= 0.5*forceT1+0.5*forceT2; p3 -= 0.5*forceT1+0.5*forceT2; p4 += forceT2; */
+       force-free and torque free bending
+       m = 1/(B-A), where B = fp3, A = fp2, C = fp1, D = fp4
+     */
     if (iaparams->p.oif_local_forces.kb > TINY_OIF_ELASTICITY_COEFFICIENT) {
         if (iaparams->p.oif_local_forces.phi0 < 0.001 || iaparams->p.oif_local_forces.phi0 > 2*M_PI - 0.001)
             printf("oif_local_forces.hpp, calc_oif_local: Resting angle is close to zero!\n");
@@ -239,14 +247,83 @@ inline int calc_oif_local(Particle *p2, Particle *p1, Particle *p3, Particle *p4
         dn2=normr(n2);
         phi = angle_btw_triangles(fp1,fp2,fp3,fp4);
         if (phi < 0.001 || phi > 2*M_PI - 0.001) printf("oif_local_forces.hpp, calc_oif_local: Angle approaches 0 or 2*Pi\n");
-        aa = (phi - iaparams->p.oif_local_forces.phi0)/iaparams->p.oif_local_forces.phi0;
-        fac = iaparams->p.oif_local_forces.kb * aa;
+
+        // common edge
+        vecsub(fp2,fp3,h);  // A - B
+
+        // altitude (v1) of the first triangle onto the common edge
+        vecsub(fp3,fp1,h1);    // B - C
+        vecsub(fp2,fp1,h2);    // A - C
+        vector_product(h1,h2,h3);
+        v1 = normr(h3)/normr(h);
+
+        // foot of this altitude on the common edge
+        t = - scalar(h,h2)/(normr(h)*normr(h));
         for(i=0; i<3; i++) {
-            force[i] += fac * n1[i]/dn1;
-            force2[i] -= (0.5 * fac * n1[i]/dn1 + 0.5 * fac * n2[i]/dn2);
-            force3[i] -= (0.5 * fac * n1[i]/dn1 + 0.5 * fac * n2[i]/dn2);
-            force4[i] += fac * n2[i]/dn2;
+            footC[i] = fp2[i] + t * h[i];
         }
+
+        // altitude (v2) of the second triangle onto the common edge
+        vecsub(fp3,fp4,h1);   // B - D
+        vecsub(fp2,fp4,h2);   // A - D
+        vector_product(h1,h2,h3);
+        v2 = normr(h3)/normr(h);
+
+        // foot of this altitude on the common edge
+        t = - scalar(h,h2)/(normr(h)*normr(h));
+        for(i=0; i<3; i++) {
+            footD[i] = fp2[i] + t * h[i];
+        }
+
+        // beta
+        fac = iaparams->p.oif_local_forces.kb * phi;
+
+        // areas of the two triangles
+        A1=area_triangle(fp1,fp2,fp3);
+        A2=area_triangle(fp2,fp3,fp4);
+
+        // feet of the altitudes to vertices on the common edge
+        vecsub(footC,fp3,h1);
+        vecsub(footD,fp3,h2);
+        vecsub(footC,fp2,h3);
+        vecsub(footD,fp2,h4);
+
+        for(i=0; i<3; i++) {
+            force[i] += fac * n1[i]/(dn1*v1);
+            force2[i] -= fac * (normr(h1)*n1[i]/(2*A1*dn1) + normr(h2)*n2[i]/(2*A2*dn2));
+            force3[i] -= fac * (normr(h3)*n1[i]/(2*A1*dn1) + normr(h4)*n2[i]/(2*A2*dn2));
+            force4[i] += fac * n2[i]/(dn2*v2);
+        }
+
+        // verify force-free
+        for(i=0; i<3; i++) {
+            Aforce[i] = fac * n1[i]/(dn1*v1);
+            Bforce[i] = - fac * (normr(h1)*n1[i]/(2*A1*dn1) + normr(h2)*n2[i]/(2*A2*dn2));
+            Cforce[i] = - fac * (normr(h3)*n1[i]/(2*A1*dn1) + normr(h4)*n2[i]/(2*A2*dn2));
+            Dforce[i] = fac * n2[i]/(dn2*v2);
+        }
+        for(i=0; i<3; i++) {
+            check_force[i] = Aforce[i] + Bforce[i] + Cforce[i] + Dforce[i];
+        }
+        printf("oif_local_forces.hpp, bending: Total force = [%e, %e, %e] \n",check_force[0], check_force[1], check_force[2]);
+
+        // verify torque-free
+        for(i=0; i<3; i++) {
+            centroid[i] = (fp1[i] + fp2[i] + fp3[i] + fp4[i])/4.0;
+        }
+        vecsub(fp2,centroid,AtoCentroid);
+        vecsub(fp3,centroid,BtoCentroid);
+        vecsub(fp1,centroid,CtoCentroid);
+        vecsub(fp4,centroid,DtoCentroid);
+        vector_product(Aforce,AtoCentroid,Atorque);
+        vector_product(Bforce,BtoCentroid,Btorque);
+        vector_product(Cforce,CtoCentroid,Ctorque);
+        vector_product(Dforce,DtoCentroid,Dtorque);
+        for(i=0; i<3; i++) {
+            check_torque[i] = Atorque[i] + Btorque[i] + Ctorque[i] + Dtorque[i];
+        }
+        printf("oif_local_forces.hpp, bending: Total torque = [%e, %e, %e] \n",check_torque[0], check_torque[1], check_torque[2]);
+
     }
 
     /* local area
