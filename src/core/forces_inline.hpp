@@ -68,6 +68,8 @@
 #include "object-in-fluid/membrane_collision.hpp"
 #include "object-in-fluid/oif_global_forces.hpp"
 #include "object-in-fluid/oif_local_forces.hpp"
+#include "object-in-fluid/oif_local_area.hpp"
+#include "object-in-fluid/oif_stretching.hpp"
 #include "object-in-fluid/out_direction.hpp"
 #include "overlap.hpp"
 #include "p3m-dipolar.hpp"
@@ -556,6 +558,12 @@ inline void add_bonded_force(Particle *p1) {
           calc_harmonic_dumbbell_pair_force(p1, p2, iaparams, dx, force);
       break;
 #endif
+#ifdef STRETCHING
+    case BONDED_IA_OIF_STRETCHING:
+      bond_broken =
+          calc_oif_stretching_pair_force(p1, p2, iaparams, dx, force);
+      break;
+#endif
     case BONDED_IA_HARMONIC:
       bond_broken = calc_harmonic_pair_force(p1, p2, iaparams, dx, force);
       break;
@@ -594,6 +602,12 @@ inline void add_bonded_force(Particle *p1) {
     case BONDED_IA_OIF_LOCAL_FORCES:
       bond_broken = calc_oif_local(p1, p2, p3, p4, iaparams, force, force2,
                                    force3, force4);
+      break;
+#endif
+#ifdef OIF_LOCAL_AREA
+    case BONDED_IA_OIF_LOCAL_AREA:
+      bond_broken = calc_oif_local_area(p1, p2, p3, iaparams, force, force2,
+                                   force3);
       break;
 #endif
 // IMMERSED_BOUNDARY

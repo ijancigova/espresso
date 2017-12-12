@@ -1953,6 +1953,123 @@ class OifLocalForces(BondedInteraction):
         oif_local_forces_set_params(
             self._bond_id, self._params["r0"], self._params["ks"], self._params["kslin"], self._params["phi0"], self._params["kb"], self._params["A01"], self._params["A02"], self._params["kal"], self._params["kvisc"])
 
+class OifStretchingForces(BondedInteraction):
+
+    def type_number(self):
+        return BONDED_IA_OIF_STRETCHING
+
+    def type_name(self):
+        """Name of interaction type.
+
+        """
+        return "OIF_STRETCHING"
+
+    def valid_keys(self):
+        """All parameters that can be set.
+
+        """
+        return "r0", "ks"
+
+    def required_keys(self):
+        """Parameters that have to be set.
+
+        """
+        return "r0", "ks"
+
+    def set_default_params(self):
+        """Sets parameters that are not required to their default value.
+
+        """
+        self._params = {"r0": 1., "ks": 0., "kslin": 0.}
+
+    def _get_params_from_es_core(self):
+        return \
+            {"r0": bonded_ia_params[self._bond_id].p.oif_stretching.r0,
+             "ks": bonded_ia_params[self._bond_id].p.oif_stretching.ks,
+             "kslin": bonded_ia_params[self._bond_id].p.oif_stretching.kslin,}
+
+    def _set_params_in_es_core(self):
+        oif_stretching_set_params(
+            self._bond_id, self._params["r0"], self._params["ks"], self._params["kslin"])
+
+class OifStretchlinForces(BondedInteraction):
+
+    def type_number(self):
+        return BONDED_IA_OIF_STRETCHING
+
+    def type_name(self):
+        """Name of interaction type.
+
+        """
+        return "OIF_STRETCHING"
+
+    def valid_keys(self):
+        """All parameters that can be set.
+
+        """
+        return "r0", "kslin"
+
+    def required_keys(self):
+        """Parameters that have to be set.
+
+        """
+        return "r0", "kslin"
+
+    def set_default_params(self):
+        """Sets parameters that are not required to their default value.
+
+        """
+        self._params = {"r0": 1., "ks": 0., "kslin": 0.}
+
+    def _get_params_from_es_core(self):
+        return \
+            {"r0": bonded_ia_params[self._bond_id].p.oif_stretching.r0,
+             "ks": bonded_ia_params[self._bond_id].p.oif_stretching.ks,
+             "kslin": bonded_ia_params[self._bond_id].p.oif_stretching.kslin,}
+
+    def _set_params_in_es_core(self):
+        oif_stretching_set_params(
+            self._bond_id, self._params["r0"], self._params["ks"], self._params["kslin"])
+
+class OifLocalAreaForces(BondedInteraction):
+
+    def type_number(self):
+        return BONDED_IA_OIF_LOCAL_AREA
+
+    def type_name(self):
+        """Name of interaction type.
+
+        """
+        return "OIF_LOCAL_AREA"
+
+    def valid_keys(self):
+        """All parameters that can be set.
+
+        """
+        return "A0", "kal"
+
+    def required_keys(self):
+        """Parameters that have to be set.
+
+        """
+        return "A0", "kal"
+
+    def set_default_params(self):
+        """Sets parameters that are not required to their default value.
+
+        """
+        self._params = {"A0": 0., "kal": 0.}
+
+    def _get_params_from_es_core(self):
+        return \
+            {"A0": bonded_ia_params[self._bond_id].p.oif_local_area.A0,
+             "kal": bonded_ia_params[self._bond_id].p.oif_local_area.kal}
+
+    def _set_params_in_es_core(self):
+        oif_local_area_set_params(
+            self._bond_id, self._params["A0"], self._params["kal"])
+
+
 IF MEMBRANE_COLLISION == 1:
     class OifOutDirection(BondedInteraction):
         def type_number(self):
@@ -1997,7 +2114,9 @@ bonded_interaction_classes = {
     int(BONDED_IA_ANGLE_COSSQUARE): Angle_Cossquare,
     int(BONDED_IA_OIF_GLOBAL_FORCES): OifGlobalForces,
     int(BONDED_IA_OIF_LOCAL_FORCES): OifLocalForces,
+    int(BONDED_IA_OIF_LOCAL_AREA): OifLocalAreaForces,
     int(BONDED_IA_OIF_OUT_DIRECTION): OifOutDirection,
+    int(BONDED_IA_OIF_STRETCHING): OifStretchingForces,
 }
 IF LENNARD_JONES:
     bonded_interaction_classes[int(BONDED_IA_SUBT_LJ)] = Subt_Lj
