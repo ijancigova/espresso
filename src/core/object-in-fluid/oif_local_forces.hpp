@@ -48,10 +48,15 @@ inline double KS(double lambda){ // Defined by (19) from Dupin2007
     (triangles have particles p2 and p3 in common)
     @return 0
 */
+
 inline int calc_oif_local(Particle *p2, Particle *p1, Particle *p3, Particle *p4,
 				 Bonded_ia_parameters *iaparams, double force[3],
 				 double force2[3], double force3[3], double force4[3])// first-fold-then-the-same approach
 {
+    int excluded_ids[10] = {12,13,5,2}; // defines excluding set of particle indices
+    int excluded_n = 4; // needed to set the number of excluded indices
+
+    
 	int i, img[3];
 	double fp1[3],fp2[3],fp3[3],fp4[3];
 	double AA[3],BB[3],CC[3];

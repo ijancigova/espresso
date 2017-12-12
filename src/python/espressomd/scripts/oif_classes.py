@@ -4,6 +4,9 @@ from oif_utils import *
 from espressomd.interactions import OifLocalForces
 from espressomd.interactions import OifGlobalForces
 from espressomd.interactions import OifOutDirection
+from espressomd.interactions import OifStretchingForces
+from espressomd.interactions import OifStretchlinForces
+from espressomd.interactions import OifLocalAreaForces
 
 
 class FixedPoint:
@@ -643,7 +646,7 @@ class OifCellType:  # analogous to oif_template
 
     """
     def __init__(self, nodes_file="", triangles_file="", system=None, resize=(1.0, 1.0, 1.0), ks=0.0, kslin=0.0,
-                 kb=0.0, kal=0.0, kag=0.0, kv=0.0, kvisc=0.0, normal=False, check_orientation=True):
+                 kb=0.0, kal=0.0, kag=0.0, kv=0.0, kvisc=0.0, normal=False, check_orientation=True, single_moduli=False):
         if (system is None) or (not isinstance(system,espressomd.System)):
             raise Exception("OifCellType: No system provided or wrong type. Quitting.")
         if (nodes_file == "") or (triangles_file == ""):
@@ -664,6 +667,9 @@ class OifCellType:  # analogous to oif_template
             print("OifCellType warning: Check of orientation of triangles is switched off.")
         if (ks != 0.0) and (kslin != 0.0):
             raise Exception("OifCellType: Cannot use linear and nonlinear stretching at the same time. Quitting.")
+        if (single_moduli):
+            if ((kb != 0) or (kag != 0) or (kv != 0)):
+                raise Exception("Only stretching and local area is available for single moduli. Quitting.")
         self.system = system
         self.mesh = Mesh(nodes_file=nodes_file, triangles_file=triangles_file, system=system, resize=resize,
                          normal=normal, check_orientation=check_orientation)
@@ -677,25 +683,48 @@ class OifCellType:  # analogous to oif_template
         self.kv = kv
         self.kvisc = kvisc
         self.normal = normal
-        if (ks != 0.0) or (kslin != 0.0) or (kb != 0.0) or (kal != 0.0):
-            for angle in self.mesh.angles:
-                r0 = vec_distance(angle.B.get_pos(), angle.C.get_pos())
-                phi = angle_btw_triangles(angle.A.get_pos(), angle.B.get_pos(), angle.C.get_pos(), angle.D.get_pos())
-                area1 = area_triangle(angle.A.get_pos(), angle.B.get_pos(), angle.C.get_pos())
-                area2 = area_triangle(angle.D.get_pos(), angle.B.get_pos(), angle.C.get_pos())
-                tmp_local_force_inter = OifLocalForces(r0=r0, ks=ks, kslin=kslin, phi0=phi, kb=kb, A01=area1, A02=area2,
-                                                       kal=kal, kvisc=kvisc)
-                self.local_force_interactions.append([tmp_local_force_inter, [angle.A, angle.B, angle.C, angle.D]])
-                self.system.bonded_inter.add(tmp_local_force_inter)
+        self.single_moduli = single_moduli
+# Added for single_moduli
+        if (single_moduli):
+            #if (ks != 0.0):
+                #for edge in self.mesh.edges:                
+                    #r0 = edge.length()
+                    #tmp_stretching_force_inter = OifStretchingForces(r0=r0, ks=ks)
+                    #self.local_force_interactions.append([tmp_stretching_force_inter, [edge.A, edge.B]])
+                    #self.system.bonded_inter.add(tmp_stretching_force_inter)
+            #if (kslin != 0.0):
+                #for edge in self.mesh.edges:                
+                    #r0 = edge.length()
+                    #tmp_stretchlin_force_inter = OifStretchlinForces(r0=r0, kslin=kslin)
+                    #self.local_force_interactions.append([tmp_stretchlin_force_inter, [edge.A, edge.B]])
+                    #self.system.bonded_inter.add(tmp_stretchlin_force_inter)
+            #if (kal != 0.0):
+                #for triangle in self.mesh.triangles:
+                    #area = area_triangle(triangle.A.get_pos(), triangle.B.get_pos(), triangle.C.get_pos())
+                    #tmp_local_area_force_inter = OifLocalAreaForces(A0=area, kal=kal)
+                    #self.local_force_interactions.append([tmp_local_area_force_inter, [triangle.A, triangle.B, triangle.C]])
+                    #self.system.bonded_inter.add(tmp_local_area_force_inter)
+            print("Single moduli")
         else:
-            print("OifCellType warning: No local interactions created when creating OifCellType.")
-        if (kag != 0.0) or (kv != 0.0):
-            surface = self.mesh.surface()
-            volume = self.mesh.volume()
-            self.global_force_interaction = OifGlobalForces(A0_g=surface, ka_g=kag, V0=volume, kv=kv)
-            self.system.bonded_inter.add(self.global_force_interaction)
-        else:
-            print("OifCellType warning: No global interactions created when creating OifCellType.")
+            if (ks != 0.0) or (kslin != 0.0) or (kb != 0.0) or (kal != 0.0):
+                for angle in self.mesh.angles:
+                    r0 = vec_distance(angle.B.get_pos(), angle.C.get_pos())
+                    phi = angle_btw_triangles(angle.A.get_pos(), angle.B.get_pos(), angle.C.get_pos(), angle.D.get_pos())
+                    area1 = area_triangle(angle.A.get_pos(), angle.B.get_pos(), angle.C.get_pos())
+                    area2 = area_triangle(angle.D.get_pos(), angle.B.get_pos(), angle.C.get_pos())
+                    tmp_local_force_inter = OifLocalForces(r0=r0, ks=ks, kslin=kslin, phi0=phi, kb=kb, A01=area1, A02=area2,
+                                                           kal=kal, kvisc=kvisc)
+                    self.local_force_interactions.append([tmp_local_force_inter, [angle.A, angle.B, angle.C, angle.D]])
+                    self.system.bonded_inter.add(tmp_local_force_inter)
+            else:
+                print("OifCellType warning: No local interactions created when creating OifCellType.")
+            if (kag != 0.0) or (kv != 0.0):
+                surface = self.mesh.surface()
+                volume = self.mesh.volume()
+                self.global_force_interaction = OifGlobalForces(A0_g=surface, ka_g=kag, V0=volume, kv=kv)
+                self.system.bonded_inter.add(self.global_force_interaction)
+            else:
+                print("OifCellType warning: No global interactions created when creating OifCellType.")
         self.print_info()
 
     def print_info(self):
@@ -712,6 +741,7 @@ class OifCellType:  # analogous to oif_template
         print("\t kag: " + custom_str(self.kag))
         print("\t kvisc: " + custom_str(self.kvisc))
         print("\t normal: " + str(self.normal))
+        print("\t single moduli: " + str(self.single_moduli))
         print("\t resize: " + str(self.resize))
         print(" ")
 
