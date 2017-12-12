@@ -770,6 +770,10 @@ const char *get_name_of_bonded_ia(BondedInteraction type) {
     return "OIF_GLOBAL_FORCES";
   case BONDED_IA_OIF_LOCAL_FORCES:
     return "OIF_LOCAL_FORCES";
+  case BONDED_IA_OIF_LOCAL_AREA:
+    return "OIF_LOCAL_AREA";
+  case BONDED_IA_OIF_STRETCHING:
+    return "OIF_STRETCHING";
   case BONDED_IA_OIF_OUT_DIRECTION:
     return "OIF_OUT_DIRECTION";
   case BONDED_IA_CG_DNA_BASEPAIR:

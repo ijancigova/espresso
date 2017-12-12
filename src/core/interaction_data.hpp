@@ -77,6 +77,10 @@ enum BondedInteraction {
   BONDED_IA_ANGLE_COSSQUARE,
   /** Type of bonded interaction: oif local forces. */
   BONDED_IA_OIF_LOCAL_FORCES,
+  /** Type of bonded interaction: oif local area. */
+  BONDED_IA_OIF_LOCAL_AREA,
+  /** Type of bonded interaction: oif stretching. */
+  BONDED_IA_OIF_STRETCHING,
   /** Type of bonded interaction: oif global forces. */
   BONDED_IA_OIF_GLOBAL_FORCES,
   /** Type of bonded interaction: determining outward direction of oif membrane.
@@ -577,6 +581,19 @@ typedef struct {
     double kvisc;
 } Oif_local_forces_bond_parameters;
 
+/** Parameters for oif_local_area */
+typedef struct {
+    double A0;
+    double kal;
+} Oif_local_area_bond_parameters;
+
+/** Parameters for oif_stretching */
+typedef struct {
+    double r0;
+    double ks;
+    double kslin;
+} Oif_stretching_bond_parameters;
+
 /** Parameters for oif_out_direction */
 typedef struct {
 
@@ -794,6 +811,8 @@ typedef union {
   Fene_bond_parameters fene;
   Oif_global_forces_bond_parameters oif_global_forces;
   Oif_local_forces_bond_parameters oif_local_forces;
+  Oif_local_area_bond_parameters oif_local_area;
+  Oif_stretching_bond_parameters oif_stretching;
   Oif_out_direction_bond_parameters oif_out_direction;
   Harmonic_bond_parameters harmonic;
 #ifdef ROTATION

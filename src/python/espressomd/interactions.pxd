@@ -167,6 +167,17 @@ cdef extern from "interaction_data.hpp":
         double kal
         double kvisc
 
+#* Parameters for oif_local_area */
+    ctypedef struct Oif_local_area_bond_parameters:
+        double A0
+        double kal
+
+#* Parameters for oif_stretching */
+    ctypedef struct Oif_stretching_bond_parameters:
+        double r0
+        double ks
+        double kslin
+
 #* Parameters for harmonic bond Potential */
     ctypedef struct Harmonic_bond_parameters:
         double k
@@ -281,6 +292,8 @@ cdef extern from "interaction_data.hpp":
         Fene_bond_parameters fene
         Oif_global_forces_bond_parameters oif_global_forces
         Oif_local_forces_bond_parameters oif_local_forces
+        Oif_local_area_bond_parameters oif_local_area
+        Oif_stretching_bond_parameters oif_stretching
         #Oif_out_direction_bond_parameters oif_out_direction
         Harmonic_bond_parameters harmonic
         Harmonic_dumbbell_bond_parameters harmonic_dumbbell
@@ -325,6 +338,10 @@ cdef extern from "object-in-fluid/oif_global_forces.hpp":
     int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g, double V0, double kv)
 cdef extern from "object-in-fluid/oif_local_forces.hpp":
     int oif_local_forces_set_params(int bond_type, double r0, double ks, double kslin, double phi0, double kb, double A01, double A02, double kal, double kvisc)
+cdef extern from "object-in-fluid/oif_local_area.hpp":
+    int oif_local_area_set_params(int bond_type, double A0, double kal)
+cdef extern from "object-in-fluid/oif_stretching.hpp":
+    int oif_stretching_set_params(int bond_type, double r0, double ks, double kslin)
 cdef extern from "object-in-fluid/out_direction.hpp":
     int oif_out_direction_set_params(int bond_type)
 
@@ -378,6 +395,8 @@ cdef extern from "interaction_data.hpp":
         BONDED_IA_ANGLE_COSINE,
         BONDED_IA_ANGLE_COSSQUARE,
         BONDED_IA_OIF_LOCAL_FORCES,
+        BONDED_IA_OIF_LOCAL_AREA,
+        BONDED_IA_OIF_STRETCHING,
         BONDED_IA_OIF_GLOBAL_FORCES,
         BONDED_IA_OIF_OUT_DIRECTION,
         BONDED_IA_CG_DNA_BASEPAIR,
