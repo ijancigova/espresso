@@ -558,10 +558,10 @@ inline void add_bonded_force(Particle *p1) {
           calc_harmonic_dumbbell_pair_force(p1, p2, iaparams, dx, force);
       break;
 #endif
-#ifdef STRETCHING
+#ifdef OIF_STRETCHING
     case BONDED_IA_OIF_STRETCHING:
       bond_broken =
-          calc_oif_stretching_pair_force(p1, p2, iaparams, dx, force);
+          calc_oif_stretching_pair_force(p1, p2, iaparams, force);
       break;
 #endif
     case BONDED_IA_HARMONIC:

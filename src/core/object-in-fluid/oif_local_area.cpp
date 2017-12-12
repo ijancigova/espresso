@@ -28,7 +28,7 @@
 
 /** set parameters for the OIF_LOCAL_AREA potential.*/
 
-int oif_local_forces_set_params(int bond_type, double A0, double kal)
+int oif_local_area_set_params(int bond_type, double A0, double kal)
 {
   if(bond_type < 0)
     return ES_ERROR;

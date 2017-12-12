@@ -1968,13 +1968,13 @@ class OifStretchingForces(BondedInteraction):
         """All parameters that can be set.
 
         """
-        return "r0", "ks"
+        return "r0", "ks", "kslin"
 
     def required_keys(self):
         """Parameters that have to be set.
 
         """
-        return "r0", "ks"
+        return "r0", "ks", "kslin"
 
     def set_default_params(self):
         """Sets parameters that are not required to their default value.
@@ -1986,50 +1986,50 @@ class OifStretchingForces(BondedInteraction):
         return \
             {"r0": bonded_ia_params[self._bond_id].p.oif_stretching.r0,
              "ks": bonded_ia_params[self._bond_id].p.oif_stretching.ks,
-             "kslin": bonded_ia_params[self._bond_id].p.oif_stretching.kslin,}
+             "kslin": bonded_ia_params[self._bond_id].p.oif_stretching.kslin}
 
     def _set_params_in_es_core(self):
         oif_stretching_set_params(
             self._bond_id, self._params["r0"], self._params["ks"], self._params["kslin"])
 
-class OifStretchlinForces(BondedInteraction):
+#class OifStretchlinForces(BondedInteraction):
 
-    def type_number(self):
-        return BONDED_IA_OIF_STRETCHING
+#    def type_number(self):
+#        return BONDED_IA_OIF_STRETCHING
 
-    def type_name(self):
-        """Name of interaction type.
+#    def type_name(self):
+#        """Name of interaction type.
 
-        """
-        return "OIF_STRETCHING"
+#        """
+#        return "OIF_STRETCHING"
 
-    def valid_keys(self):
-        """All parameters that can be set.
+#    def valid_keys(self):
+#        """All parameters that can be set.
 
-        """
-        return "r0", "kslin"
+#        """
+#        return "r0", "kslin"
 
-    def required_keys(self):
-        """Parameters that have to be set.
+#    def required_keys(self):
+#        """Parameters that have to be set.
 
-        """
-        return "r0", "kslin"
+#        """
+#        return "r0", "kslin"
 
-    def set_default_params(self):
-        """Sets parameters that are not required to their default value.
+#    def set_default_params(self):
+#        """Sets parameters that are not required to their default value.
 
-        """
-        self._params = {"r0": 1., "ks": 0., "kslin": 0.}
+#        """
+#        self._params = {"r0": 1., "ks": 0., "kslin": 0.}
 
-    def _get_params_from_es_core(self):
-        return \
-            {"r0": bonded_ia_params[self._bond_id].p.oif_stretching.r0,
-             "ks": bonded_ia_params[self._bond_id].p.oif_stretching.ks,
-             "kslin": bonded_ia_params[self._bond_id].p.oif_stretching.kslin,}
+#    def _get_params_from_es_core(self):
+#        return \
+#            {"r0": bonded_ia_params[self._bond_id].p.oif_stretching.r0,
+#             "ks": bonded_ia_params[self._bond_id].p.oif_stretching.ks,
+#             "kslin": bonded_ia_params[self._bond_id].p.oif_stretching.kslin}
 
-    def _set_params_in_es_core(self):
-        oif_stretching_set_params(
-            self._bond_id, self._params["r0"], self._params["ks"], self._params["kslin"])
+#    def _set_params_in_es_core(self):
+#        oif_stretching_set_params(
+#            self._bond_id, self._params["r0"], self._params["ks"], self._params["kslin"])
 
 class OifLocalAreaForces(BondedInteraction):
 
@@ -2116,7 +2116,7 @@ bonded_interaction_classes = {
     int(BONDED_IA_OIF_LOCAL_FORCES): OifLocalForces,
     int(BONDED_IA_OIF_LOCAL_AREA): OifLocalAreaForces,
     int(BONDED_IA_OIF_OUT_DIRECTION): OifOutDirection,
-    int(BONDED_IA_OIF_STRETCHING): OifStretchingForces,
+    int(BONDED_IA_OIF_STRETCHING): OifStretchingForces
 }
 IF LENNARD_JONES:
     bonded_interaction_classes[int(BONDED_IA_SUBT_LJ)] = Subt_Lj

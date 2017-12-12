@@ -5,7 +5,6 @@ from espressomd.interactions import OifLocalForces
 from espressomd.interactions import OifGlobalForces
 from espressomd.interactions import OifOutDirection
 from espressomd.interactions import OifStretchingForces
-from espressomd.interactions import OifStretchlinForces
 from espressomd.interactions import OifLocalAreaForces
 
 
@@ -686,25 +685,20 @@ class OifCellType:  # analogous to oif_template
         self.single_moduli = single_moduli
 # Added for single_moduli
         if (single_moduli):
-            #if (ks != 0.0):
-                #for edge in self.mesh.edges:                
-                    #r0 = edge.length()
-                    #tmp_stretching_force_inter = OifStretchingForces(r0=r0, ks=ks)
-                    #self.local_force_interactions.append([tmp_stretching_force_inter, [edge.A, edge.B]])
-                    #self.system.bonded_inter.add(tmp_stretching_force_inter)
-            #if (kslin != 0.0):
-                #for edge in self.mesh.edges:                
-                    #r0 = edge.length()
-                    #tmp_stretchlin_force_inter = OifStretchlinForces(r0=r0, kslin=kslin)
-                    #self.local_force_interactions.append([tmp_stretchlin_force_inter, [edge.A, edge.B]])
-                    #self.system.bonded_inter.add(tmp_stretchlin_force_inter)
-            #if (kal != 0.0):
-                #for triangle in self.mesh.triangles:
-                    #area = area_triangle(triangle.A.get_pos(), triangle.B.get_pos(), triangle.C.get_pos())
-                    #tmp_local_area_force_inter = OifLocalAreaForces(A0=area, kal=kal)
-                    #self.local_force_interactions.append([tmp_local_area_force_inter, [triangle.A, triangle.B, triangle.C]])
-                    #self.system.bonded_inter.add(tmp_local_area_force_inter)
-            print("Single moduli")
+            if (ks != 0.0) or (kslin != 0.0):
+                print("ks" + str(ks) + " kslin " + str(kslin))
+                for edge in self.mesh.edges:                
+                    r0 = edge.length()
+                    tmp_stretching_force_inter = OifStretchingForces(r0=r0, ks=ks, kslin=kslin)
+                    self.local_force_interactions.append([tmp_stretching_force_inter, [edge.A, edge.B]])
+                    self.system.bonded_inter.add(tmp_stretching_force_inter)
+            if (kal != 0.0):
+                for triangle in self.mesh.triangles:
+                    area = area_triangle(triangle.A.get_pos(), triangle.B.get_pos(), triangle.C.get_pos())
+                    tmp_local_area_force_inter = OifLocalAreaForces(A0=area, kal=kal)
+                    self.local_force_interactions.append([tmp_local_area_force_inter, [triangle.A, triangle.B, triangle.C]])
+                    self.system.bonded_inter.add(tmp_local_area_force_inter)
+            print("Single moduli used")
         else:
             if (ks != 0.0) or (kslin != 0.0) or (kb != 0.0) or (kal != 0.0):
                 for angle in self.mesh.angles:
