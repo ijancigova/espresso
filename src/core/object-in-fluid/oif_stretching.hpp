@@ -86,7 +86,7 @@ inline int calc_oif_stretching_pair_force(Particle *p1, Particle *p2,
         len = sqrt(len2);
         dr = len - iaparams->p.oif_stretching.r0;
         lambda = 1.0*len/iaparams->p.oif_stretching.r0;
-        fac = -iaparams->p.oif_stretching.ks * ks_nonlinearity(lambda) * dr; // no normalization
+        fac = iaparams->p.oif_stretching.ks * ks_nonlinearity(lambda) * dr; // no normalization
         for(i=0; i<3; i++) {
             force[i] = fac*dx[i]/len;
         }
@@ -98,7 +98,7 @@ inline int calc_oif_stretching_pair_force(Particle *p1, Particle *p2,
         len2 = sqrlen(dx);
         len = sqrt(len2);
         dr = len - iaparams->p.oif_stretching.r0;
-        fac = -iaparams->p.oif_stretching.kslin * dr; // no normalization
+        fac = iaparams->p.oif_stretching.kslin * dr; // no normalization
         for(i=0; i<3; i++) {
             force[i] = fac*dx[i]/len;
         }
