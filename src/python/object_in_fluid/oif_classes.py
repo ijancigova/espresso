@@ -1569,3 +1569,61 @@ class OifCell(object):
             return results
         else:
             return 0
+            
+    def edge_length_analysis(self):
+        """
+        Compares the lengths of current vs relaxed edge lengts, returning minimal ratio, averaged ratio and maximal ratio.
+        """
+        min_val = 100000
+        max_val = 0
+        i = 0
+        aver_val = 0
+        for e in self.mesh.edges:
+            a_current_pos = e.A.get_pos()
+            b_current_pos = e.B.get_pos()
+            a_orig_pos = self.cell_type.mesh.points[e.A.id].get_pos()
+            b_orig_pos = self.cell_type.mesh.points[e.B.id].get_pos()
+            current_dist = e.length()
+            orig_dist = vec_distance(a_orig_pos, b_orig_pos)
+            val = (1.0*current_dist)/(1.0*orig_dist)
+            if val < min_val:
+                min_val = val
+            if val > max_val:
+                max_val = val
+            aver_val += val
+            i += 1
+        aver_val = aver_val/(1.0*i)
+        result = np.array([min_val, aver_val, max_val])
+        return result
+
+    def bending_angle_analysis(self):
+        """
+        Compares the angles btw triangles of current vs relaxed angles, returning minimal ratio, averaged ratio and maximal ratio.
+        """
+        min_val = 100000
+        max_val = 0
+        i = 0
+        aver_val = 0
+        for angle in self.mesh.angles:
+            a_current_pos = angle.A.get_pos()
+            b_current_pos = angle.B.get_pos()
+            c_current_pos = angle.C.get_pos()
+            d_current_pos = angle.D.get_pos()
+            a_orig_pos = self.cell_type.mesh.points[angle.A.id].get_pos()
+            b_orig_pos = self.cell_type.mesh.points[angle.B.id].get_pos()
+            c_orig_pos = self.cell_type.mesh.points[angle.C.id].get_pos()
+            d_orig_pos = self.cell_type.mesh.points[angle.D.id].get_pos()
+            current_angle = angle.size()
+            orig_angle = angle_btw_triangles(
+                a_orig_pos, b_orig_pos, c_orig_pos, d_orig_pos)        
+            val = (1.0*current_angle)/(1.0*orig_angle)
+            if val < min_val:
+                min_val = val
+            if val > max_val:
+                max_val = val
+            aver_val += val
+            i += 1
+        aver_val = aver_val/(1.0*i)
+        result = np.array([min_val, aver_val, max_val])
+        return result
+  
