@@ -148,21 +148,21 @@ inline int calc_oif_local(Particle *p2, Particle *p1, Particle *p3,
         -iaparams->p.oif_local_forces.ks * KS(lambda) * dr; // no normalization
 // added threshold for max prolongation
     double val = 0.0;
-    if ((len > 1.5*iaparams->p.oif_local_forces.r0) && (len < 1.75*iaparams->p.oif_local_forces.r0)) {
-        val = 0.001/((1.75*iaparams->p.oif_local_forces.r0 - len)*(1.75*iaparams->p.oif_local_forces.r0 - len));
+    if ((len > 1.75*iaparams->p.oif_local_forces.r0) && (len < 2.0*iaparams->p.oif_local_forces.r0)) {
+        val = 0.001/((2.0*iaparams->p.oif_local_forces.r0 - len)*(2.0*iaparams->p.oif_local_forces.r0 - len));
         if (val > 5.0) {
             val = 5.0;
         }
         fac = fac*(1.0 + val);
     }
-    //if ((len > 0.3*iaparams->p.oif_local_forces.r0) && (len < 0.7*iaparams->p.oif_local_forces.r0)) {
-        //val = 0.001/((len - 0.3*iaparams->p.oif_local_forces.r0)*(len - 0.3*iaparams->p.oif_local_forces.r0));
-        //if (val > 5.0) {
-            //val = 5.0;
-        //}
-        //fac = fac*(1.0 + val);
-        ////printf(" thr %2.12lf ",val);
-    //}
+    if ((len > 0.5*iaparams->p.oif_local_forces.r0) && (len < 0.7*iaparams->p.oif_local_forces.r0)) {
+        val = 0.001/((len - 0.5*iaparams->p.oif_local_forces.r0)*(len - 0.5*iaparams->p.oif_local_forces.r0));
+        if (val > 5.0) {
+            val = 5.0;
+        }
+        fac = fac*(1.0 + val);
+        //printf(" thr %2.12lf ",val);
+    }
 // end of threshold for max prolongation
     for (i = 0; i < 3; i++) {
       force2[i] += fac * dx[i] / len;

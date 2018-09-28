@@ -802,6 +802,17 @@ class Mesh(object):
                     coor[1]) + " " + custom_str(coor[2]) + "\n")
             out_file.close()
         return 0
+        
+        
+    def exclusions_cut_off(self, cut_off):
+        for p in self.points:
+            for r in self.points:
+                if r.id > p.id:
+                    ppos = p.get_pos()
+                    rpos = r.get_pos()
+                    dist = np.sqrt((ppos[0] - rpos[0])*(ppos[0] - rpos[0]) + (ppos[1] - rpos[1])*(ppos[1] - rpos[1]) + (ppos[2] - rpos[2])*(ppos[2] - rpos[2]))
+                    if dist < cut_off:
+                        self.system.part[p.id].add_exclusion(r.id)
 
 
 class OifCellType(object):  # analogous to oif_template
@@ -966,6 +977,9 @@ class OifCell(object):
         if exclusion_neighbours is True:
             for edge in self.mesh.edges:
                 self.cell_type.system.part[edge.A.part_id].add_exclusion(edge.B.part_id)
+
+
+
     
     def get_origin(self):
         center = np.array([0.0, 0.0, 0.0])
@@ -1626,4 +1640,32 @@ class OifCell(object):
         aver_val = aver_val/(1.0*i)
         result = np.array([min_val, aver_val, max_val])
         return result
-  
+
+    def create_neighbours(self):
+        excl = []
+        for p in self.mesh.points:
+            neigh = []
+            for e in self.mesh.edges:
+                if e.A.id == p.id:
+                     neigh.append(e.B.id)  
+                if e.B.id == p.id:
+                     neigh.append(e.A.id)  
+            print("point " + str(p.id) + " neigh: " + str(neigh))
+            for m in neigh:
+                for n in neigh:
+                    if m < n:
+                        included = 0
+                        for ex in excl:
+                            if m==ex[0] and n==ex[1]:
+                                included = 1
+                        if included == 0:
+                            excl.append([m,n])
+        print("n exclusions: " + str(len(excl)))
+        print(str(excl))
+        for ex in excl:
+            self.cell_type.system.part[ex[0]].add_exclusion(ex[1])
+
+
+
+
+
