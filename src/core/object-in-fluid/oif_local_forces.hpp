@@ -109,26 +109,26 @@ calc_oif_local(Particle const &p2, Particle const &p1, Particle const &p3,
     double val = 0.0;
     auto const r0 = iaparams.p.oif_local_forces.r0;
     if ((len > 2.0*r0) && (len < 2.5*r0)) {
-        val = 0.01*r0*r0/((2.0*r0 - len)*(2.0*r0 - len));
+        val = 1.0/4.0*r0*r0/((2.5*r0 - len)*(2.5*r0 - len));
         if (val > 150.0) {
             val = 150.0;
         }
-        fac = fac*(1.0 + val);
+        fac = fac*val;
     }        
     if (len > 2.5*r0) {
         val = 150.0;
-        fac = fac*(1.0 + val);
+        fac = fac*val;
     }        
     if ((len > 0.25*r0) && (len < 0.5*r0)) {
-        val = 0.01*r0*r0/((len - 0.5*r0)*(len - 0.5*r0));
+        val = 1.0/16.0*r0*r0/((len - 0.25*r0)*(len - 0.25*r0));
         if (val > 150.0) {
             val = 150.0;
         }
-        fac = fac*(1.0 + val);
+        fac = fac*val;
     }
     if (len < 0.25*r0) {
         val = 150.0;
-        fac = fac*(1.0 + val);
+        fac = fac*val;
     }
     auto const f = (fac / len) * dx;
     force2 += f;
