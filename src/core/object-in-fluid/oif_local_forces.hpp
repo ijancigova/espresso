@@ -114,14 +114,20 @@ calc_oif_local(Particle const &p2, Particle const &p1, Particle const &p3,
             val = 150.0;
         }
         fac = fac*(1.0 + val);
-        //printf("%lf %lf %lf",val,r0,len);
-        //printf("x");
+    }        
+    if (len > 2.5*r0) {
+        val = 150.0;
+        fac = fac*(1.0 + val);
     }        
     if ((len > 0.25*r0) && (len < 0.5*r0)) {
         val = 0.01*r0*r0/((len - 0.5*r0)*(len - 0.5*r0));
         if (val > 150.0) {
             val = 150.0;
         }
+        fac = fac*(1.0 + val);
+    }
+    if (len < 0.25*r0) {
+        val = 150.0;
         fac = fac*(1.0 + val);
     }
     auto const f = (fac / len) * dx;
