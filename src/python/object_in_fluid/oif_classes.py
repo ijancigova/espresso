@@ -1426,7 +1426,7 @@ class OifCell:
         nodes_coord = in_file.read().split("\n")
         in_file.close()
         # removes a blank line at the end of the file if there is any:
-        nodes_coord = filter(None, nodes_coord)
+        nodes_coord = list(filter(None, nodes_coord))
         # here we have list of lines with triplets of strings
         if len(nodes_coord) != n_points:
             raise Exception("OifCell: Mesh nodes not set to new positions: "
