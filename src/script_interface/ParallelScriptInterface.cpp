@@ -1,43 +1,50 @@
 /*
-  Copyright (C) 2015-2018 The ESPResSo project
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2015-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "ParallelScriptInterface.hpp"
 
 #include <boost/mpi/collectives.hpp>
+#include <boost/serialization/utility.hpp>
 
 #include "ParallelScriptInterfaceSlave.hpp"
-#include "utils/parallel/ParallelObject.hpp"
 
 #include <cassert>
 
-namespace ScriptInterface {
-using CallbackAction = ParallelScriptInterfaceSlave::CallbackAction;
+namespace {
+Communication::MpiCallbacks *m_cb = nullptr;
 
-ParallelScriptInterface::ParallelScriptInterface(std::string const &name) {
+void make_remote_handle() {
+  assert(m_cb && "Not initialized.");
+
+  new ScriptInterface::ParallelScriptInterfaceSlave(m_cb);
+}
+} // namespace
+
+REGISTER_CALLBACK(make_remote_handle)
+
+namespace ScriptInterface {
+ParallelScriptInterface::ParallelScriptInterface(std::string const &name)
+    : m_callback_id(m_cb, [](CallbackAction) {}) {
   assert(m_cb && "Not initialized!");
 
   /* Create the slaves */
-  Utils::Parallel::ParallelObject<ParallelScriptInterfaceSlave>::make(*m_cb);
-
-  /* Add the callback */
-  m_callback_id =
-      m_cb->add(Communication::MpiCallbacks::function_type([](int, int) {}));
+  m_cb->call(make_remote_handle);
 
   call(CallbackAction::NEW);
 
@@ -65,10 +72,6 @@ bool ParallelScriptInterface::operator!=(ParallelScriptInterface const &rhs) {
 
 void ParallelScriptInterface::initialize(Communication::MpiCallbacks &cb) {
   m_cb = &cb;
-  ParallelScriptInterfaceSlave::m_cb = &cb;
-
-  Utils::Parallel::ParallelObject<
-      ParallelScriptInterfaceSlave>::register_callback(cb);
 }
 
 void ParallelScriptInterface::construct(VariantMap const &params) {
@@ -84,7 +87,7 @@ void ParallelScriptInterface::set_parameter(const std::string &name,
                                             const Variant &value) {
   std::pair<std::string, Variant> d(name, Variant());
 
-  if (is_objectid(value)) {
+  if (is_type<ObjectId>(value)) {
     d.second = map_parallel_to_local_id(value);
   } else {
     d.second = value;
@@ -95,18 +98,6 @@ void ParallelScriptInterface::set_parameter(const std::string &name,
   boost::mpi::broadcast(m_cb->comm(), d, 0);
 
   m_p->set_parameter(d.first, d.second);
-
-  collect_garbage();
-}
-
-void ParallelScriptInterface::set_parameters(const VariantMap &parameters) {
-  call(CallbackAction::SET_PARAMETERS);
-
-  auto p = unwrap_variant_map(parameters);
-
-  boost::mpi::broadcast(m_cb->comm(), p, 0);
-
-  m_p->set_parameters(p);
 
   collect_garbage();
 }
@@ -150,7 +141,7 @@ VariantMap ParallelScriptInterface::unwrap_variant_map(VariantMap const &map) {
 
   /* Unwrap the object ids */
   for (auto &it : p) {
-    if (is_objectid(it.second)) {
+    if (is_type<ObjectId>(it.second)) {
       it.second = map_parallel_to_local_id(it.second);
     }
   }
@@ -160,7 +151,7 @@ VariantMap ParallelScriptInterface::unwrap_variant_map(VariantMap const &map) {
 
 Variant
 ParallelScriptInterface::map_local_to_parallel_id(Variant const &value) const {
-  if (is_objectid(value)) {
+  if (is_type<ObjectId>(value)) {
     /** Check if the objectid is the empty object (ObjectId()),
      * if so it does not need translation, the empty object
      * has the same id everywhere.
@@ -169,10 +160,10 @@ ParallelScriptInterface::map_local_to_parallel_id(Variant const &value) const {
 
     if (oid != ObjectId()) {
       return obj_map.at(oid)->id();
-    } else {
-      return oid;
     }
-  } else if (is_vector(value)) {
+    return oid;
+  }
+  if (is_type<std::vector<Variant>>(value)) {
     auto const &in_vec = boost::get<std::vector<Variant>>(value);
     std::vector<Variant> out_vec;
     out_vec.reserve(in_vec.size());
@@ -182,9 +173,8 @@ ParallelScriptInterface::map_local_to_parallel_id(Variant const &value) const {
     }
 
     return out_vec;
-  } else {
-    return value;
   }
+  return value;
 }
 
 Variant
@@ -203,16 +193,16 @@ ParallelScriptInterface::map_parallel_to_local_id(Variant const &value) {
 
     /* and return the id of the underlying object */
     return inner_id;
-  } else if (so_ptr == nullptr) {
+  }
+  if (so_ptr == nullptr) {
     /* Release the object */
     obj_map.erase(outer_id);
 
     /* Return None */
     return ObjectId();
-  } else {
-    throw std::runtime_error(
-        "Parameters passed to Parallel entities must also be parallel.");
   }
+  throw std::runtime_error(
+      "Parameters passed to Parallel entities must also be parallel.");
 }
 
 void ParallelScriptInterface::collect_garbage() {
@@ -232,6 +222,4 @@ void ParallelScriptInterface::collect_garbage() {
     ++it;
   }
 }
-Communication::MpiCallbacks *ParallelScriptInterface::m_cb = nullptr;
-
 } /* namespace ScriptInterface */

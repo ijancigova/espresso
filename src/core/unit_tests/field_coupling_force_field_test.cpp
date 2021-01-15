@@ -1,33 +1,33 @@
 /*
-Copyright (C) 2010-2018 The ESPResSo project
-
-This file is part of ESPResSo.
-
-ESPResSo is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-ESPResSo is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #define BOOST_TEST_MODULE test
 #define BOOST_TEST_DYN_LINK
 #include <boost/test/unit_test.hpp>
 
-#include "core/field_coupling/ForceField.hpp"
-#include "core/field_coupling/PotentialField.hpp"
+#include "field_coupling/ForceField.hpp"
+#include "field_coupling/PotentialField.hpp"
 
-#include "core/field_coupling/detail/Base.hpp"
-#include "core/field_coupling/detail/BindCoupling.hpp"
+#include "field_coupling/detail/Base.hpp"
+#include "field_coupling/detail/BindCoupling.hpp"
 using namespace FieldCoupling;
 
-#include "Vector.hpp"
+#include <utils/Vector.hpp>
 
 template <bool linear> struct Id {
   static constexpr const bool is_linear = linear;
@@ -47,8 +47,8 @@ BOOST_AUTO_TEST_CASE(BindCoupling_test) {
 
   /* is_linear */
   {
-    static_assert(true == BindCoupling<Id<true>, Particle>::is_linear, "");
-    static_assert(false == BindCoupling<Id<false>, Particle>::is_linear, "");
+    static_assert(BindCoupling<Id<true>, Particle>::is_linear, "");
+    static_assert(!BindCoupling<Id<false>, Particle>::is_linear, "");
   }
 
   /* make_bind_coupling */
@@ -95,7 +95,6 @@ BOOST_AUTO_TEST_CASE(FieldBase_test) {
     int f = 2;
 
     auto base = Base<int, int>(c, f);
-    c = f = 0;
 
     BOOST_CHECK(1 == base.coupling());
     BOOST_CHECK(2 == base.field());
@@ -103,33 +102,38 @@ BOOST_AUTO_TEST_CASE(FieldBase_test) {
 }
 
 struct DummyVectorField {
-  Vector3d operator()(const Vector3d &x) const { return 2. * x; }
+  Utils::Vector3d operator()(const Utils::Vector3d &x, double t) const {
+    return t * x;
+  }
 };
 
 BOOST_AUTO_TEST_CASE(ForceField_test) {
   auto ff =
       ForceField<Id<true>, DummyVectorField>(Id<true>{}, DummyVectorField{});
-  const Vector3d x{1., 2., 3.};
+  const Utils::Vector3d x{1., 2., 3.};
   const int p = 5;
 
-  BOOST_CHECK((2. * x) == ff.force(5, x));
+  BOOST_CHECK((9. * x) == ff.force(5, x, 9.));
   BOOST_CHECK(1 == ff.coupling().count);
 }
 
 struct DummyScalarField {
-  double operator()(const Vector3d &x) const { return 2. * x.norm(); }
-  Vector3d gradient(const Vector3d &x) const { return 3. * x; }
+  double operator()(const Utils::Vector3d &x, double t) const {
+    return t * x.norm();
+  }
+  Utils::Vector3d jacobian(const Utils::Vector3d &x, double = {}) const {
+    return 3. * x;
+  }
 };
 
 BOOST_AUTO_TEST_CASE(PotentialField_test) {
   auto pf = PotentialField<Id<true>, DummyScalarField>(Id<true>{},
                                                        DummyScalarField{});
-  const Vector3d x{1., 2., 3.};
-  const int p = 5;
+  const Utils::Vector3d x{1., 2., 3.};
 
-  BOOST_CHECK((2. * x.norm()) == pf.energy(5, x));
+  BOOST_CHECK((2. * x.norm()) == pf.energy(5, x, 2.));
   BOOST_CHECK(1 == pf.coupling().count);
 
-  BOOST_CHECK(-(3. * x) == pf.force(5, x));
+  BOOST_CHECK(-(3. * x) == pf.force(5, x, 0));
   BOOST_CHECK(2 == pf.coupling().count);
 }

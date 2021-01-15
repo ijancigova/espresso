@@ -1,37 +1,35 @@
 /*
-  Copyright (C) 2010-2018 The ESPResSo project
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "cuda_init.hpp"
+#ifdef CUDA
 #include "communication.hpp"
-#include "config.hpp"
-#include "utils.hpp"
 
+#include <utils/constants.hpp>
+
+#include <cstring>
 #include <iterator>
 #include <mpi.h>
 #include <set>
-#include <string.h>
 
-#ifdef CUDA
-
-/** Helper class force device set
+/** Helper class force device set.
  */
-
 struct CompareDevices {
   bool operator()(const EspressoGpuDevice &a,
                   const EspressoGpuDevice &b) const {
@@ -39,18 +37,17 @@ struct CompareDevices {
     /* Both devs are from the same node, order by id */
     if (name_comp == 0)
       return a.id < b.id;
-    else
-      return name_comp < 0;
+
+    return name_comp < 0;
   }
 };
 
-/** Gather list of CUDA devices on all nodes on the master node
-    It relies on MPI_Get_processor_name() to get a unique identifier of
-    the physical node, as opposed to the logical rank of which there can
-    be more than one on one node.
+/** Gather list of CUDA devices on all nodes on the master node.
+ *  It relies on MPI_Get_processor_name() to get a unique identifier of
+ *  the physical node, as opposed to the logical rank of which there can
+ *  be more than one on one node.
  */
-
-std::vector<EspressoGpuDevice> cuda_gather_gpus(void) {
+std::vector<EspressoGpuDevice> cuda_gather_gpus() {
   int n_gpus = cuda_get_n_gpus();
   char proc_name[MPI_MAX_PROCESSOR_NAME];
   int proc_name_len;
@@ -58,7 +55,7 @@ std::vector<EspressoGpuDevice> cuda_gather_gpus(void) {
   std::vector<EspressoGpuDevice> devices;
   /* Global unique device list (only relevant on master) */
   std::vector<EspressoGpuDevice> g_devices;
-  int *n_gpu_array = 0;
+  int *n_gpu_array = nullptr;
 
   MPI_Get_processor_name(proc_name, &proc_name_len);
 
@@ -77,7 +74,7 @@ std::vector<EspressoGpuDevice> cuda_gather_gpus(void) {
     }
   }
 
-  /** Update n_gpus to number of usable devices */
+  /* Update n_gpus to number of usable devices */
   n_gpus = devices.size();
 
   if (this_node == 0) {
@@ -107,9 +104,8 @@ std::vector<EspressoGpuDevice> cuda_gather_gpus(void) {
     /* Send number of devices to master */
     MPI_Gather(&n_gpus, 1, MPI_INT, n_gpu_array, 1, MPI_INT, 0, MPI_COMM_WORLD);
     /* Send devices to maser */
-    for (std::vector<EspressoGpuDevice>::iterator device = devices.begin();
-         device != devices.end(); ++device) {
-      MPI_Send(&(*device), sizeof(EspressoGpuDevice), MPI_BYTE, 0, 0,
+    for (auto &device : devices) {
+      MPI_Send(&device, sizeof(EspressoGpuDevice), MPI_BYTE, 0, 0,
                MPI_COMM_WORLD);
     }
   }

@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2018 The ESPResSo project
+# Copyright (C) 2010-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -24,9 +24,9 @@ def AddBending(system, kb):
     from espressomd.interactions import IBM_Tribend
     with open("tables/softAngles", "r") as fp:
         numAngles = int(fp.readline())
-        print "Found " + str(numAngles) + " angles"
+        print("Found {}".format(numAngles))
         # actual add
-        for i in range(0, numAngles):
+        for _ in range(0, numAngles):
             line = str.split(fp.readline())
             id1 = int(line[0])
             id2 = int(line[1])

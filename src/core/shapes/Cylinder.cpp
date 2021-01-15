@@ -1,29 +1,26 @@
 /*
-  Copyright (C) 2010-2018 The ESPResSo project
-  Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
-  Max-Planck-Institute for Polymer Research, Theory Group
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ * Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
+ *   Max-Planck-Institute for Polymer Research, Theory Group
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "Cylinder.hpp"
-#include "utils.hpp"
 #include <cmath>
-
-using namespace std;
 
 namespace Shapes {
 
@@ -36,31 +33,29 @@ std::pair<double, double> Cylinder::dist_half_pore(double r, double z) const {
     if (!m_open && z >= m_half_length && r < m_rad) {
       /* Closest feature: cap */
       return {0, -(z - m_half_length)};
-    } else if (z >= m_half_length && (m_open || r >= m_rad)) {
+    }
+    if (z >= m_half_length && (m_open || r >= m_rad)) {
       /* Closest feature: ring */
       return {-(r - m_rad), -(z - m_half_length)};
-    } else {
-      /* Closest feature: cylinder */
-      return {-(r - m_rad), 0};
     }
-  } else {
-    /* Inside */
-    if (!m_open && z >= m_half_length - m_rad &&
-        r < (z - (m_half_length - m_rad))) {
-      /* Closest feature: cap */
-      return {0, m_half_length - z};
-    } else {
-      /* Closest feature: cylinder */
-      return {m_rad - r, 0};
-    }
+    /* Closest feature: cylinder */
+    return {-(r - m_rad), 0};
   }
+  /* Inside */
+  if (!m_open && z >= m_half_length - m_rad &&
+      r < (z - (m_half_length - m_rad))) {
+    /* Closest feature: cap */
+    return {0, m_half_length - z};
+  }
+  /* Closest feature: cylinder */
+  return {m_rad - r, 0};
 }
 
-int Cylinder::calculate_dist(const double *ppos, double *dist,
-                             double *vec) const {
+void Cylinder::calculate_dist(const Utils::Vector3d &pos, double &dist,
+                              Utils::Vector3d &vec) const {
   /* Coordinate transform to cylinder coords
      with origin at m_center. */
-  Vector3d const c_dist = Vector3d(ppos, ppos + 3) - m_center;
+  Utils::Vector3d const c_dist = pos - m_center;
   auto const z = e_z * c_dist;
   auto const r_vec = c_dist - z * e_z;
   auto const r = r_vec.norm();
@@ -83,11 +78,7 @@ int Cylinder::calculate_dist(const double *ppos, double *dist,
     dz *= -1;
   }
 
-  *dist = std::sqrt(dr * dr + dz * dz) * m_direction * side;
-  for (int i = 0; i < 3; i++) {
-    vec[i] = (-dr * e_r[i] + -dz * e_z[i]);
-  }
-
-  return 0;
+  dist = std::sqrt(dr * dr + dz * dz) * m_direction * side;
+  vec = -dr * e_r - dz * e_z;
 }
 } // namespace Shapes

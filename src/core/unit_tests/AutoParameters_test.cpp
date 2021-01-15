@@ -1,26 +1,28 @@
 /*
-Copyright (C) 2010-2018 The ESPResSo project
-
-This file is part of ESPResSo.
-
-ESPResSo is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-ESPResSo is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #define BOOST_TEST_MODULE AutoParameters test
 #define BOOST_TEST_DYN_LINK
 #include <boost/test/unit_test.hpp>
 
-#include "script_interface/auto_parameters/AutoParameters.hpp"
+#include <boost/range/algorithm/find.hpp>
+
+#include "auto_parameters/AutoParameters.hpp"
 
 using ScriptInterface::AutoParameters;
 
@@ -34,10 +36,11 @@ struct A : AutoParameters<A> {
 BOOST_AUTO_TEST_CASE(basic) {
   A a{0, 42};
 
-  auto valid_parameters = a.valid_parameters();
+  auto const &valid_parameters = a.valid_parameters();
+
   BOOST_CHECK(valid_parameters.size() == 2);
-  BOOST_CHECK(valid_parameters.find("i") != valid_parameters.end());
-  BOOST_CHECK(valid_parameters.find("j") != valid_parameters.end());
+  BOOST_CHECK(boost::find(valid_parameters, "i") != valid_parameters.end());
+  BOOST_CHECK(boost::find(valid_parameters, "j") != valid_parameters.end());
 
   BOOST_CHECK(0 == boost::get<int>(a.get_parameter("i")));
   BOOST_CHECK(42 == boost::get<int>(a.get_parameter("j")));

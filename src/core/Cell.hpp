@@ -1,31 +1,33 @@
 /*
-Copyright (C) 2010-2018 The ESPResSo project
-
-This file is part of ESPResSo.
-
-ESPResSo is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-ESPResSo is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #ifndef CORE_CELL_HPP
 #define CORE_CELL_HPP
 
+#include "Particle.hpp"
+#include "ParticleList.hpp"
+
+#include <utils/Span.hpp>
+
+#include <boost/range/iterator_range.hpp>
+
 #include <functional>
 #include <vector>
-
-#include "particle_data.hpp"
-
-#include "utils/Range.hpp"
-#include "utils/Span.hpp"
 
 template <class CellRef> class Neighbors {
   using storage_type = std::vector<CellRef>;
@@ -34,7 +36,7 @@ public:
   using value_type = typename storage_type::value_type;
   using iterator = typename storage_type::iterator;
   using const_iterator = typename storage_type::const_iterator;
-  using cell_range = Utils::Range<iterator>;
+  using cell_range = boost::iterator_range<iterator>;
 
 private:
   void copy(const Neighbors &rhs) {
@@ -105,10 +107,6 @@ public:
    * @brief All neighbors of the cell.
    */
   neighbors_type &neighbors() { return m_neighbors; }
-
-  void resize(size_t size) {
-    realloc_particlelist(static_cast<ParticleList *>(this), this->n = size);
-  }
 };
 
 #endif

@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2018 The ESPResSo project
+# Copyright (C) 2010-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -16,8 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import numpy as np
 import math
-from espressomd.shapes import Rhomboid
-from espressomd.shapes import Cylinder
 
 small_epsilon = 0.000000001
 large_number = 10000000.0
@@ -34,12 +32,12 @@ def get_triangle_normal(a, b, c):
 
     Parameters
     ----------
-    a : list of :obj:`float`
-          vector with 3 components, point a
-    b : list of :obj:`float`
-          vector with 3 components, point b
-    c : list of :obj:`float`
-          vector with 3 components, point c
+    a : (3,) array_like of :obj:`float`
+          Point a
+    b : (3,) array_like of :obj:`float`
+          Point b
+    c : (3,) array_like of :obj:`float`
+          Point c
     """
     n = [0.0, 0.0, 0.0]
     n[0] = (b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1])
@@ -54,12 +52,11 @@ def norm(vect):
 
     Parameters
     ----------
-    vect : list of :obj:`float`
-          vector with 3 components
+    vect : (3,) array_like of :obj:`float`
+          Input vector
 
     """
-    v = np.array(vect)
-    return np.sqrt(np.dot(v, v))
+    return np.linalg.norm(vect)
 
 
 def vec_distance(a, b):
@@ -68,10 +65,10 @@ def vec_distance(a, b):
 
     Parameters
     ----------
-    a : list of :obj:`float`
-          vector with 3 components, point a
-    b : list of :obj:`float`
-          vector with 3 components, point b
+    a : (3,) array_like of :obj:`float`
+          Point a
+    b : (3,) array_like of :obj:`float`
+          Point b
 
     """
     return norm(np.array(a) - np.array(b))
@@ -79,23 +76,40 @@ def vec_distance(a, b):
 
 def area_triangle(a, b, c):
     """
-    Returns the area of a triangle given by points a,b,c.
+    Returns the area of a triangle given by points a, b, c.
 
 
     Parameters
     ----------
-    a : list of :obj:`float`
-          vector with 3 components, point a
-    b : list of :obj:`float`
-          vector with 3 components, point b
-    c : list of :obj:`float`
-          vector with 3 components, point c
+    a : (3,) array_like of :obj:`float`
+          Point a
+    b : (3,) array_like of :obj:`float`
+          Point b
+    c : (3,) array_like of :obj:`float`
+          Point c
 
     """
     n = get_triangle_normal(a, b, c)
     area = 0.5 * norm(n)
     return area
 
+def angle_btw_vectors(a,b):
+    """
+    Returns the angle btw two vectors
+    
+
+    Parameters
+    ----------
+    a : first vector, list of :obj:`float`
+          vector with 3 components, point a
+    b : second vector, list of :obj:`float`
+          vector with 3 components, point b
+
+    """
+    cosa = a[0]*b[0] + a[1]*b[1] + a[2]*b[2] 
+    cosa = cosa/np.sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])/np.sqrt(b[0]*b[0] + b[1]*b[1] + b[2]*b[2])
+    alpha = np.arccos(cosa)        
+    return alpha
 
 def angle_btw_triangles(P1, P2, P3, P4):
     """
@@ -103,34 +117,24 @@ def angle_btw_triangles(P1, P2, P3, P4):
 
     Parameters
     ----------
-    P1 : list of :obj:`float`
-          vector with 3 components, point P1
-    P2 : list of :obj:`float`
-          vector with 3 components, point P2
-    P3 : list of :obj:`float`
-          vector with 3 components, point P3
-    P4 : list of :obj:`float`
-          vector with 3 components, point P4
+    P1 : (3,) array_like of :obj:`float`
+          Point P1
+    P2 : (3,) array_like of :obj:`float`
+          Point P2
+    P3 : (3,) array_like of :obj:`float`
+          Point P3
+    P4 : (3,) array_like of :obj:`float`
+          Point P4
 
     """
     n1 = get_triangle_normal(P2, P1, P3)
     n2 = get_triangle_normal(P2, P3, P4)
-    tmp11 = np.dot(n1, n2)
-    tmp11 = tmp11 * abs(tmp11)
-
-    tmp22 = np.dot(n1, n1)
-    tmp33 = np.dot(n2, n2)
-    tmp11 /= (tmp22 * tmp33)
-
-    if tmp11 > 0:
-        tmp11 = np.sqrt(tmp11)
-    else:
-        tmp11 = - np.sqrt(- tmp11)
+    tmp11 = np.dot(n1, n2) / (np.linalg.norm(n1) * np.linalg.norm(n2))
 
     if tmp11 >= 1.0:
-        tmp11 = 0.0
-    elif tmp11 <= -1.:
-        tmp11 = np.pi
+        tmp11 = 1.0
+    elif tmp11 <= -1.0:
+        tmp11 = -1.0
 
     phi = np.pi - math.acos(tmp11)
 
@@ -149,7 +153,7 @@ def discard_epsilon(x):
           real number
 
     """
-    if (x > -small_epsilon and x < small_epsilon):
+    if abs(x) < small_epsilon:
         res = 0.0
     else:
         res = x
@@ -178,9 +182,9 @@ def oif_calc_stretching_force(ks, pA, pB, dist0, dist):
     ----------
     ks : :obj:`float`
           coefficient of the stretching, spring stiffness
-    pA : list of :obj:`float`
+    pA : (3,) array_like of :obj:`float`
           position of the first particle
-    pB : list of :obj:`float`
+    pB : (3,) array_like of :obj:`float`
           position of the second particle
     dist0 : :obj:`float`
           relaxed distance btw particles
@@ -210,9 +214,9 @@ def oif_calc_linear_stretching_force(ks, pA, pB, dist0, dist):
     ----------
     ks : :obj:`float`
           coefficient of the stretching, spring stiffness
-    pA : list of :obj:`float`
+    pA : (3,) array_like of :obj:`float`
           position of the first particle
-    pB : list of :obj:`float`
+    pB : (3,) array_like of :obj:`float`
           position of the second particle
     dist0 : :obj:`float`
           relaxed distance btw particles
@@ -236,13 +240,13 @@ def oif_calc_bending_force(kb, pA, pB, pC, pD, phi0, phi):
     ----------
     kb : :obj:`float`
           coefficient of the stretching, spring stiffness
-    pA : list of :obj:`float`
+    pA : (3,) array_like of :obj:`float`
           position of the first particle
-    pB : list of :obj:`float`
+    pB : (3,) array_like of :obj:`float`
           position of the second particle
-    pC : list of :obj:`float`
+    pC : (3,) array_like of :obj:`float`
           position of the third particle
-    pD : list of :obj:`float`
+    pD : (3,) array_like of :obj:`float`
           position of the fourth particle
     phi0 : :obj:`float`
           relaxed angle btw two triangles
@@ -273,11 +277,11 @@ def oif_calc_local_area_force(kal, pA, pB, pC, A0, A):
     ----------
     kal : :obj:`float`
           coefficient of the stretching, spring stiffness
-    pA : list of :obj:`float`
+    pA : (3,) array_like of :obj:`float`
           position of the first particle
-    pB : list of :obj:`float`
+    pB : (3,) array_like of :obj:`float`
           position of the second particle
-    pC : list of :obj:`float`
+    pC : (3,) array_like of :obj:`float`
           position of the third particle
     A0 : :obj:`float`
           relaxed area of the triangle
@@ -323,11 +327,11 @@ def oif_calc_global_area_force(kag, pA, pB, pC, Ag0, Ag):
     ----------
     kag : :obj:`float`
           coefficient of the stretching, spring stiffness
-    pA : list of :obj:`float`
+    pA : (3,) array_like of :obj:`float`
           position of the first particle
-    pB : list of :obj:`float`
+    pB : (3,) array_like of :obj:`float`
           position of the second particle
-    pC : list of :obj:`float`
+    pC : (3,) array_like of :obj:`float`
           position of the third particle
     Ag0 : :obj:`float`
           relaxed surface area of the cell
@@ -371,11 +375,11 @@ def oif_calc_volume_force(kv, pA, pB, pC, V0, V):
     ----------
     kv : :obj:`float`
           coefficient of the stretching, spring stiffness
-    pA : list of :obj:`float`
+    pA : (3,) array_like of :obj:`float`
           position of the first particle
-    pB : list of :obj:`float`
+    pB : (3,) array_like of :obj:`float`
           position of the second particle
-    pC : list of :obj:`float`
+    pC : (3,) array_like of :obj:`float`
           position of the third particle
     V0 : :obj:`float`
           relaxed volume of the cell
@@ -462,48 +466,53 @@ def output_vtk_cylinder(cyl_shape, n, out_file):
           filename for the output
 
     """
-    # length is the full height of the cylinder (note: used to be just half in the previous versions)
-    # only vertical cylinders are supported for now, i.e. with normal (0.0,
-    # 0.0, 1.0)
 
-    axis = cyl_shape.axis
-    length = cyl_shape.length
+    axis = cyl_shape.axis/norm(cyl_shape.axis)
+    length = cyl_shape.length  # length is the full height of the cylinder
     radius = cyl_shape.radius
     center = cyl_shape.center
 
-    check_axis = True
-    if axis[0] != 0.0:
-        check_axis = False
-    if axis[1] != 0.0:
-        check_axis = False
-    if axis[2] == 0.0:
-        check_axis = False
-    if check_axis is False:
-        raise Exception(
-            "output_vtk_cylinder: Output for this type of cylinder is not supported yet.")
-    axisZ = 1.0
+    # v1 and v2 are unit vectors perpendicular to axis and to each other
+    if axis[0] == 0.0 and axis[1] == 0.0 and axis[2] != 0.0:
+        # this is for vertical cylinder
+        v1 = (1, 0, 0)
+        v2 = (0, 1, 0)
+    else:
+        # these are for all other cylinders
+        v1 = (axis[1], -axis[0], 0)
+        v2 = np.cross(axis, v1)
 
     # setting points on perimeter
     alpha = 2 * np.pi / n
     points = 2 * n
 
-    # shift center to the bottom circle
-    p1 = center - length * np.array(axis) / 2.0
-
+    # write file header
     output_file = open(out_file, "w")
     output_file.write("# vtk DataFile Version 3.0\n")
     output_file.write("Data\n")
     output_file.write("ASCII\n")
     output_file.write("DATASET POLYDATA\n")
     output_file.write("POINTS " + str(points) + " float\n")
+
+    # shift center to the bottom circle
+    p1 = center - length * np.array(axis) / 2.0
+
     for i in range(0, n):
         output_file.write(
-            str(p1[0] + radius * np.cos(i * alpha)) + " " + str(p1[1] + radius * np.sin(i * alpha)) + " " +
-            str(p1[2]) + "\n")
+            str(p1[0] + radius * (np.cos(i * alpha) * v1[0] + np.sin(i * alpha) * v2[0])) + " " +
+            str(p1[1] + radius * (np.cos(i * alpha) * v1[1] + np.sin(i * alpha) * v2[1])) + " " +
+            str(p1[2] + radius * (np.cos(i * alpha) * v1[2] + np.sin(i * alpha) * v2[2])) + "\n")
+
+    # shift center to the top circle
+    p1 = center + length * np.array(axis) / 2.0
+
     for i in range(0, n):
         output_file.write(
-            str(p1[0] + radius * np.cos(i * alpha)) + " " + str(p1[1] + radius * np.sin(i * alpha)) + " " +
-            str(p1[2] + length * axisZ) + "\n")
+            str(p1[0] + radius * (np.cos(i * alpha) * v1[0] + np.sin(i * alpha) * v2[0])) + " " +
+            str(p1[1] + radius * (np.cos(i * alpha) * v1[1] + np.sin(i * alpha) * v2[1])) + " " +
+            str(p1[2] + radius * (np.cos(i * alpha) * v1[2] + np.sin(i * alpha) * v2[2])) + "\n")
+
+
     output_file.write(
         "POLYGONS " + str(n + 2) + " " + str(5 * n + (n + 1) * 2) + "\n")
 
@@ -536,7 +545,7 @@ def output_vtk_lines(lines, out_file):
 
     Parameters
     ----------
-    lines : list of :obj:`float`
+    lines : array_like :obj:`float`
           lines is a list of pairs of points p1, p2
           each pair represents a line segment to output to vtk
           each line in lines contains 6 floats: p1x, p1y, p1z, p2x, p2y, p2z
@@ -568,16 +577,15 @@ def output_vtk_lines(lines, out_file):
     return 0
 
 
-def output_vtk_pore(
-    axis, length, outer_rad_left, outer_rad_right, pos, rad_left, rad_right,
-                    smoothing_radius, m, out_file):
+def output_vtk_pore(axis, length, outer_rad_left, outer_rad_right,  # pylint: disable=unused-argument
+                    pos, rad_left, rad_right, smoothing_radius, m, out_file):
     """
     Outputs the VTK files for visualisation of a pore in e.g. Paraview.
 
     Parameters
     ----------
-    axis : list of :obj:`float`
-          3 floats specifying the axis
+    axis : (3,) array_like of :obj:`float`
+          The axis
     length : :obj:`float`
           length of pore
     outer_rad_left : :obj:`float`
@@ -590,8 +598,8 @@ def output_vtk_pore(
           inner right radius of pore
     smoothing_radius : :obj:`float`
           smoothing radius for surface connecting outer and inner radii of the pore
-    pos : list of :obj:`float`
-          3 floats specifying position of the center of the pore
+    pos : (3,) array_like of :obj:`float`
+          Position of the center of the pore
     m : :obj:`int`
           number of discretization sections
     out_file : :obj:`str`
@@ -604,9 +612,8 @@ def output_vtk_pore(
     # should implement rotation
     # m is sufficient to be 10
 
-    if ".vtk" not in out_file:
-        print(
-            "output_vtk_pore warning: A file with vtk format will be written without .vtk extension.")
+    if not out_file.endswith(".vtk"):
+        print("output_vtk_pore warning: A file with vtk format will be written without .vtk extension.")
 
     # n must be even therefore:
     n = 2 * m

@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2018 The ESPResSo project
+# Copyright (C) 2010-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -14,33 +14,34 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-""" Particle polarization with cold drude oscillators on a coarse grained ionic liquid.
+"""
+Particle polarization with cold Drude oscillators on a coarse-grained
+simulation of the ionic liquid BMIM PF6.
 """
 
-from __future__ import print_function
-import sys
 import time
-import espressomd
-from espressomd.electrostatics import P3M
-from espressomd.interactions import ThermalizedBond, HarmonicBond
 import os
 import numpy as np
 import argparse
-from espressomd.visualization_opengl import *
-from threading import Thread
-from time import sleep
-from espressomd import drude_helpers
-from espressomd.virtual_sites import VirtualSitesRelative
 
+import espressomd
 required_features = ["LENNARD_JONES", "P3M", "MASS", "ROTATION",
-                     "ROTATIONAL_INERTIA", "VIRTUAL_SITES_RELATIVE", "THOLE", "LANGEVIN_PER_PARTICLE"]
+                     "ROTATIONAL_INERTIA", "VIRTUAL_SITES_RELATIVE",
+                     "THOLE", "LANGEVIN_PER_PARTICLE"]
 espressomd.assert_features(required_features)
 
-print("\nThis script demonstrates particle polarization with cold drude\n\
-oscillators. It is a coarse grained simulation of the ionic liquid BMIM PF6.\n\
-The density and particle numbers are low for testing purposes. It writes the\n\
-xyz trajectory and RDF to the specified output path. Run with --help to see\n\
-available arguments (e.g. use --visual for visualization).")
+from espressomd.electrostatics import P3M
+from espressomd.interactions import ThermalizedBond, HarmonicBond
+from espressomd import drude_helpers
+from espressomd.virtual_sites import VirtualSitesRelative
+import espressomd.visualization_opengl
+
+
+print(__doc__ + """
+The density and particle numbers are low for testing purposes. It writes the
+xyz trajectory and RDF to the specified output path. Run with --help to see
+available arguments (e.g. use --visual for visualization).
+""")
 
 parser = argparse.ArgumentParser(description='Drude LJ liquid')
 parser.add_argument("--epsilon_r", nargs='?', default=1.0, type=float)
@@ -61,7 +62,8 @@ args = parser.parse_args()
 
 print("\nArguments:", args)
 
-#NUM PARTICLES AND BOX
+np.random.seed(42)
+# NUM PARTICLES AND BOX
 n_ionpairs = 100
 n_part = n_ionpairs * 2
 density_si = 0.5
@@ -81,30 +83,33 @@ if args.visu:
     c_dru = [0, 0, 1, 1]
     c_com = [0, 0, 0, 1]
     c_cat = [0, 1, 0, 1]
-    visualizer = openGLLive(system,
-                            background_color=[1, 1, 1],
-                            drag_enabled=True,
-                            ext_force_arrows=True,
-                            drag_force=10,
-                            draw_bonds=False,
-                            quality_particles=32,
-                            particle_coloring='type',
-                            particle_type_colors=[
-                            c_ani, c_cat, c_cat, c_cat, c_com, c_dru, c_dru, c_dru, c_dru],
-                            particle_sizes=[0.5 * 5.06, 0.5 * 4.38, 0.5 * 3.41, 0.5 * 5.04, 0.1, d_scale * 5.06, d_scale * 4.38, d_scale * 3.41, d_scale * 5.04])
+    visualizer = espressomd.visualization_opengl.openGLLive(
+        system,
+        background_color=[1, 1, 1],
+        drag_enabled=True,
+        ext_force_arrows=True,
+        drag_force=10,
+        draw_bonds=False,
+        quality_particles=32,
+        particle_coloring='type',
+        particle_type_colors=[c_ani, c_cat, c_cat, c_cat,
+                              c_com, c_dru, c_dru, c_dru, c_dru],
+        particle_sizes=[
+            0.5 * 5.06, 0.5 * 4.38, 0.5 * 3.41, 0.5 * 5.04, 0.1,
+            d_scale * 5.06, d_scale * 4.38, d_scale * 3.41, d_scale * 5.04])
 
 args.path = os.path.join(args.path, '')
 if not os.path.exists(args.path):
-    os.mkdir(args.path)
+    os.makedirs(args.path)
 
-#TIMESTEP
+# TIMESTEP
 fs_to_md_time = 1.0e-2
 time_step_fs = 1.0
 time_step_ns = time_step_fs * 1e-6
 dt = time_step_fs * fs_to_md_time
 system.time_step = dt
 
-#TEMPERATURE
+# TEMPERATURE
 SI_temperature = 353.0
 gamma_com = 1.0
 kb_kjmol = 0.0083145
@@ -114,25 +119,25 @@ temperature_com = SI_temperature * kb_kjmol
 # kJ/mol
 coulomb_prefactor = 1.67101e5 * kb_kjmol / args.epsilon_r
 
-#DRUDE/TOTAL MASS
+# DRUDE/TOTAL MASS
 mass_tot = 100.0
 mass_core = mass_tot - args.mass_drude
 mass_red_drude = args.mass_drude * mass_core / mass_tot
 
-#SPRING CONSTANT DRUDE
+# SPRING CONSTANT DRUDE
 k_drude = 4184.0  # in kJ/mol/A^2
-#Period of free oscillation: T_spring = 2Pi/w; w = sqrt(k_d/m_d)
+# Period of free oscillation: T_spring = 2Pi/w; w = sqrt(k_d/m_d)
 T_spring = 2.0 * np.pi * np.sqrt(args.mass_drude / k_drude)
 
-#TEMP DRUDE
+# TEMP DRUDE
 SI_temperature_drude = 1.0
 temperature_drude = SI_temperature_drude * kb_kjmol
 gamma_drude = mass_red_drude / T_spring
 
-#CELLSYSTEM
+# CELLSYSTEM
 system.cell_system.skin = 0.4
 
-#FORCEFIELD
+# FORCEFIELD
 types = {"PF6": 0, "BMIM_C1": 1, "BMIM_C2": 2, "BMIM_C3":
          3, "BMIM_COM": 4, "PF6_D": 5, "BMIM_C1_D": 6, "BMIM_C2_D": 7, "BMIM_C3_D": 8}
 charges = {"PF6": -0.78, "BMIM_C1": 0.4374,
@@ -171,6 +176,7 @@ def combination_rule_sigma(rule, sig1, sig2):
     else:
         return ValueError("No combination rule defined")
 
+
 # Lennard-Jones interactions parameters
 for i in range(len(lj_types)):
     for j in range(i, len(lj_types)):
@@ -185,7 +191,7 @@ for i in range(len(lj_types)):
         system.non_bonded_inter[types[s[0]], types[s[1]]].lennard_jones.set_params(
             epsilon=lj_eps, sigma=lj_sig, cutoff=lj_cut, shift="auto")
 
-#Place Particles
+# Place Particles
 rid = 0
 anion_ids = []
 cation_sites_ids = []
@@ -195,8 +201,8 @@ cation_c2_ids = []
 cation_c3_ids = []
 
 for i in range(n_ionpairs):
-    system.part.add(id=rid, type=types["PF6"], pos=np.random.random(
-        3) * box_l, q=charges["PF6"], mass=masses["PF6"])
+    system.part.add(id=rid, type=types["PF6"], pos=np.random.random(3) * box_l,
+                    q=charges["PF6"], mass=masses["PF6"])
     anion_ids.append(rid)
     if args.drude:
         rid += 2
@@ -205,13 +211,15 @@ for i in range(n_ionpairs):
 
 for i in range(n_ionpairs):
     pos_com = np.random.random(3) * box_l
-    system.part.add(id=rid, type=types["BMIM_COM"], pos=pos_com, mass=masses[
-                    "BMIM_COM"], rinertia=[646.284, 585.158, 61.126], temp=0, gamma=0, rotation=[1, 1, 1])
+    system.part.add(
+        id=rid, type=types["BMIM_COM"], pos=pos_com,
+        mass=masses["BMIM_COM"], rinertia=[646.284, 585.158, 61.126],
+        temp=0, gamma=0, rotation=[1, 1, 1])
     cation_com_ids.append(rid)
     com_id = rid
     rid += 1
-    system.part.add(id=rid, type=types["BMIM_C1"], pos=pos_com + [
-                    0, -0.527, 1.365], q=charges["BMIM_C1"])
+    system.part.add(id=rid, type=types["BMIM_C1"],
+                    pos=pos_com + [0, -0.527, 1.365], q=charges["BMIM_C1"])
     system.part[rid].vs_auto_relate_to(com_id)
     cation_c1_ids.append(rid)
     cation_sites_ids.append(rid)
@@ -219,8 +227,8 @@ for i in range(n_ionpairs):
         rid += 2
     else:
         rid += 1
-    system.part.add(id=rid, type=types["BMIM_C2"], pos=pos_com + [
-                    0, 1.641, 2.987], q=charges["BMIM_C2"])
+    system.part.add(id=rid, type=types["BMIM_C2"],
+                    pos=pos_com + [0, 1.641, 2.987], q=charges["BMIM_C2"])
     system.part[rid].vs_auto_relate_to(com_id)
     cation_c2_ids.append(rid)
     cation_sites_ids.append(rid)
@@ -228,8 +236,8 @@ for i in range(n_ionpairs):
         rid += 2
     else:
         rid += 1
-    system.part.add(id=rid, type=types["BMIM_C3"], pos=pos_com + [
-                    0, 0.187, -2.389], q=charges["BMIM_C3"])
+    system.part.add(id=rid, type=types["BMIM_C3"],
+                    pos=pos_com + [0, 0.187, -2.389], q=charges["BMIM_C3"])
     system.part[rid].vs_auto_relate_to(com_id)
     cation_c3_ids.append(rid)
     cation_sites_ids.append(rid)
@@ -238,19 +246,23 @@ for i in range(n_ionpairs):
     else:
         rid += 1
 
-#ENERGY MINIMIZATION
+# ENERGY MINIMIZATION
 print("\n-->E minimization")
 print("Before:", system.analysis.energy()["total"])
+n_max_steps = 100000
 system.minimize_energy.init(
-    f_max=5.0, gamma=0.01, max_steps=100000, max_displacement=0.01)
+    f_max=5.0, gamma=0.01, max_steps=n_max_steps, max_displacement=0.01)
 system.minimize_energy.minimize()
 print("After:", system.analysis.energy()["total"])
 
-#THERMOSTAT
+# THERMOSTAT
 if not args.drude:
-    system.thermostat.set_langevin(kT=temperature_com, gamma=gamma_com)
+    system.thermostat.set_langevin(
+        kT=temperature_com,
+        gamma=gamma_com,
+        seed=42)
 
-#ELECTROSTATICS
+# ELECTROSTATICS
 if args.gpup3m:
     from espressomd.electrostatics import P3MGPU
     print("\n-->Tune P3M GPU")
@@ -265,23 +277,32 @@ if args.drude:
     print("-->Adding Drude related bonds")
     thermalized_dist_bond = ThermalizedBond(
         temp_com=temperature_com, gamma_com=gamma_com,
-                                            temp_distance=temperature_drude, gamma_distance=gamma_drude, r_cut=min(lj_sigmas.values()) * 0.5)
+        temp_distance=temperature_drude, gamma_distance=gamma_drude,
+        r_cut=min(lj_sigmas.values()) * 0.5, seed=123)
     harmonic_bond = HarmonicBond(k=k_drude, r_0=0.0, r_cut=1.0)
     system.bonded_inter.add(thermalized_dist_bond)
     system.bonded_inter.add(harmonic_bond)
 
     for i in anion_ids:
-        drude_helpers.add_drude_particle_to_core(system, harmonic_bond, thermalized_dist_bond, system.part[
-                                                 i], i + 1, types["PF6_D"], polarizations["PF6"], args.mass_drude, coulomb_prefactor)
+        drude_helpers.add_drude_particle_to_core(
+            system, harmonic_bond, thermalized_dist_bond, system.part[i],
+            i + 1, types["PF6_D"], polarizations["PF6"],
+            args.mass_drude, coulomb_prefactor)
     for i in cation_c1_ids:
-        drude_helpers.add_drude_particle_to_core(system, harmonic_bond, thermalized_dist_bond, system.part[
-                                                 i], i + 1, types["BMIM_C1_D"], polarizations["BMIM_C1"], args.mass_drude, coulomb_prefactor)
+        drude_helpers.add_drude_particle_to_core(
+            system, harmonic_bond, thermalized_dist_bond, system.part[i],
+            i + 1, types["BMIM_C1_D"], polarizations["BMIM_C1"],
+            args.mass_drude, coulomb_prefactor)
     for i in cation_c2_ids:
-        drude_helpers.add_drude_particle_to_core(system, harmonic_bond, thermalized_dist_bond, system.part[
-                                                 i], i + 1, types["BMIM_C2_D"], polarizations["BMIM_C2"], args.mass_drude, coulomb_prefactor)
+        drude_helpers.add_drude_particle_to_core(
+            system, harmonic_bond, thermalized_dist_bond, system.part[i],
+            i + 1, types["BMIM_C2_D"], polarizations["BMIM_C2"],
+            args.mass_drude, coulomb_prefactor)
     for i in cation_c3_ids:
-        drude_helpers.add_drude_particle_to_core(system, harmonic_bond, thermalized_dist_bond, system.part[
-                                                 i], i + 1, types["BMIM_C3_D"], polarizations["BMIM_C3"], args.mass_drude, coulomb_prefactor)
+        drude_helpers.add_drude_particle_to_core(
+            system, harmonic_bond, thermalized_dist_bond, system.part[i],
+            i + 1, types["BMIM_C3_D"], polarizations["BMIM_C3"],
+            args.mass_drude, coulomb_prefactor)
 
     drude_helpers.setup_and_add_drude_exclusion_bonds(system)
 
@@ -290,12 +311,15 @@ if args.drude:
         drude_helpers.add_all_thole(system)
 
     if args.intra_ex:
-        #SETUP BONDS ONCE
+        # SETUP BONDS ONCE
         print("-->Adding intramolecular exclusions")
-        drude_helpers.setup_intramol_exclusion_bonds(system, [types["BMIM_C1_D"], types["BMIM_C2_D"], types["BMIM_C3_D"]], [
-                                                     types["BMIM_C1"], types["BMIM_C2"], types["BMIM_C3"]], [charges["BMIM_C1"], charges["BMIM_C2"], charges["BMIM_C3"]])
+        drude_helpers.setup_intramol_exclusion_bonds(
+            system,
+            [types["BMIM_C1_D"], types["BMIM_C2_D"], types["BMIM_C3_D"]],
+            [types["BMIM_C1"], types["BMIM_C2"], types["BMIM_C3"]],
+            [charges["BMIM_C1"], charges["BMIM_C2"], charges["BMIM_C3"]])
 
-        #ADD SR EX BONDS PER MOLECULE
+        # ADD SR EX BONDS PER MOLECULE
         for i in cation_c1_ids:
             drude_helpers.add_intramol_exclusion_bonds(
                 system, [i + 1, i + 3, i + 5], [i, i + 2, i + 4])
@@ -308,8 +332,9 @@ system.time_step = time_step_fs * fs_to_md_time
 
 print("\n-->Timing")
 start = time.time()
-system.integrator.run(1000)
-time_per_step = (time.time() - start) / 1000.0
+n_timing_steps = 1000
+system.integrator.run(n_timing_steps)
+time_per_step = (time.time() - start) / float(n_timing_steps)
 ns_per_hour = 3600.0 * time_step_fs * 1e-6 / time_per_step
 ns_per_day = 24.0 * ns_per_hour
 print("Yield:", ns_per_day, "ns/day")
@@ -323,7 +348,7 @@ else:
 
     for i in range(n_int_cycles):
         system.integrator.run(n_int_steps)
-        print("{0:.2f} %".format(100.0 * i / n_int_cycles))
+        print("{0:.0f} %".format(100.0 * i / n_int_cycles))
 
     print("\n-->Integration")
 
@@ -331,7 +356,7 @@ else:
     n_int_cycles = int(args.walltime * 3600.0 / time_per_step / n_int_steps)
     print(
         "Simulating for", args.walltime, "h, which is", n_int_cycles, "cycles x",
-          n_int_steps, "steps, which is", args.walltime * ns_per_hour, "ns simulation time")
+        n_int_steps, "steps, which is", args.walltime * ns_per_hour, "ns simulation time")
 
     file_traj = open(args.path + "traj.xyz", "w")
     n_parts_tot = len(system.part)
@@ -339,7 +364,7 @@ else:
     for i in range(n_int_cycles):
         system.integrator.run(n_int_steps)
 
-        #XYZ TRAJECTORY
+        # XYZ TRAJECTORY
         file_traj.write(str(n_parts_tot) + '\n')
         file_traj.write(
             "t(ns) = " + str(time_step_ns * i * n_int_steps) + '\n')
@@ -347,12 +372,12 @@ else:
             file_traj.write(
                 shortTypes[p.type] + " " + ' '.join(map(str, p.pos_folded)) + '\n')
 
-        #FOR RDFS
+        # FOR RDFS
         system.analysis.append()
 
-        print("{0:.2f} %".format(100.0 * i / n_int_cycles))
+        print("{0:.1f} %".format(100.0 * i / n_int_cycles))
 
-    #RDFs
+    # RDFs
     rdf_bins = 100
     r_min = 0.0
     r_max = system.box_l[0] / 2.0

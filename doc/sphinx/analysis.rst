@@ -10,7 +10,7 @@ Analysis
   calculation and data accumulation performed in the core.
 - :ref:`Observables and correlators`: This provides a more flexible concept of
   in-core analysis, where a certain observable (:ref:`Available observables`),
-  a rule for data accumulation (ref Accumulators) and/or correlation (:ref:`Correlations`) can be defined.
+  a rule for data accumulation (:ref:`Accumulators`) and/or correlation (:ref:`Correlations`) can be defined.
 
 
 .. _Direct analysis routines:
@@ -35,7 +35,6 @@ The direct analysis commands can be classified into two types:
     - :ref:`Moment of inertia matrix`
     - :ref:`Gyration tensor`
     - :ref:`Stress Tensor`
-    - :ref:`Local Stress Tensor`
 
 - Analysis on stored configurations, added by :meth:`espressomd.analyze.Analysis.append`:
     - :ref:`Radial distribution function` with ``rdf_type='<rdf>'``
@@ -63,10 +62,10 @@ For example, ::
 
 Momentum of the System
 ~~~~~~~~~~~~~~~~~~~~~~
-:meth:`espressomd.analyze.Analysis.analyze_linear_momentum`
+:meth:`espressomd.analyze.Analysis.linear_momentum`
 
 This command returns the total linear momentum of the particles and the
-lattice Boltzmann (LB) fluid, if one exists. Giving the optional
+lattice-Boltzmann (LB) fluid, if one exists. Giving the optional
 parameters either causes the command to ignore the contribution of LB or
 of the particles.
 
@@ -97,7 +96,7 @@ For example, ::
     7.0
     >>> system.analysis.dist_to(pos=[0, 0, 0])
     1.4142135623730951
-    >>> system.analysis.mindist()
+    >>> system.analysis.min_dist()
     1.0
 
 
@@ -148,7 +147,7 @@ Two arrays are returned corresponding to the normalized distribution and the bin
     ~~~~~~~~~~~~~~~~~~
     .. todo:: This feature is not implemented
 
-    analyze radial\_density\_map
+    analyze radial_density_map
 
     Returns the radial density of particles around a given axis. Parameters
     are:
@@ -232,7 +231,7 @@ index_radial     index_axial   pos_radial   pos_axial   binvolume  density  v_ra
 0                1             0.05         0.25        0.0314159  31.831   1.41421    1         0        0          0
 =============    ============  ===========  ==========  =========  =======  ========   ========  =======  =========  =======
 
-As one can see the columns `density`, `v_radial` and `v_axial` appear twice.
+As one can see the columns **density**, **v_radial** and **v_axial** appear twice.
 The order of appearance corresponds to the order of the types in the argument ``types``.
 For example if was set to ``types=[0, 1]`` then the first triple is associated to type 0 and
 the second triple to type 1.
@@ -289,8 +288,8 @@ Structure factor
 Calculate the structure factor for given types.
 
 Returns the spherically averaged structure factor :math:`S(q)` of
-particles specified in . :math:`S(q)` is calculated for all possible
-wave vectors, :math:`\frac{2\pi}{L} <= q <= \frac{2\pi}{L}` `order`.
+particles specified in ``sf_types``. :math:`S(q)` is calculated for all possible
+wave vectors :math:`\frac{2\pi}{L} \leq q \leq \frac{2\pi}{L}` up to ``sf_order``.
 
 ..
     .. _Van-Hove autocorrelation function:
@@ -368,43 +367,6 @@ Analyze the gyration tensor of particles of a given type, or of all particles in
     same aggregate. The second optional parameter enables one to consider
     aggregation state of only oppositely charged particles.
 
-    .. _Finding holes:
-
-    Finding holes
-    ~~~~~~~~~~~~~
-    .. todo:: This feature is not implemented
-
-    analyze holes
-
-    Function for the calculation of the unoccupied volume (often also called
-    free volume) in a system. Details can be found in
-    :cite:`schmitz00a`. It identifies free space in the
-    simulation box via a mesh based cluster algorithm. Free space is defined
-    via a probe particle and its interactions with other particles which
-    have to be defined through LJ interactions with the other existing
-    particle types via the inter command before calling this routine. A
-    point of the mesh is counted as free space if the distance of the point
-    is larger than LJ\_cut+LJ\_offset to any particle as defined by the LJ
-    interaction parameters between the probe particle type and other
-    particle types.How to use this function: Define interactions between all
-    (or the ones you are interested in) particle types in your system and a
-    fictitious particle type. Practically one uses the van der Waals radius
-    of the particles plus the size of the probe you want to use as the
-    Lennard-Jones cutoff. The mesh spacing is the box length divided by the
-    .
-
-    { { } { } { } }
-
-    A hole is defined as a continuous cluster of mesh elements that belong
-    to the unoccupied volume. Since the function is quite rudimentary it
-    gives back the whole information suitable for further processing on the
-    script level. and are given in number of mesh points, which means you
-    have to calculate the actual size via the corresponding volume or
-    surface elements yourself. The complete information is given in the
-    element\_lists for each hole. The element numbers give the position of a
-    mesh point in the linear representation of the 3D grid (coordinates are
-    in the order x, y, z). Attention: the algorithm assumes a cubic box.
-    Surface results have not been tested. .
 
 	.. _Temperature of the LB fluid:
 
@@ -412,7 +374,7 @@ Analyze the gyration tensor of particles of a given type, or of all particles in
 	~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	.. todo:: This feature is not implemented
 
-	This command returns the temperature of the lattice Boltzmann (LB)
+	This command returns the temperature of the lattice-Boltzmann (LB)
 	fluid, see Chapter [sec:lb], by averaging over the fluid nodes. In case
 	or are compiled in and boundaries are defined, only the available fluid
 	volume is taken into account.
@@ -432,16 +394,16 @@ The instantaneous pressure is calculated (if there are no electrostatic interact
 by the volume averaged, direction averaged instantaneous virial pressure
 
 .. math::
-     p = \frac{2E_{kinetic}}{Vf} + \frac{\sum_{j>i} {F_{ij}r_{ij}}}{3V}
+     p = \frac{2E_{\text{kinetic}}}{Vf} + \frac{\sum_{j>i} {F_{ij}r_{ij}}}{3V}
      :label: eqptens
 
 where :math:`f=3` is the number of translational degrees of freedom of
 each particle, :math:`V` is the volume of the system,
-:math:`E_{kinetic}` is the kinetic energy, :math:`F_{ij}` the force
+:math:`E_{\text{kinetic}}` is the kinetic energy, :math:`F_{ij}` the force
 between particles i and j, and :math:`r_{ij}` is the distance between
 them. The kinetic energy divided by the degrees of freedom is
 
-.. math:: \frac{2E_{kinetic}}{f} = \frac{1}{3}\sum_{i} {m_{i}v_{i}^{2}}.
+.. math:: \frac{2E_{\text{kinetic}}}{f} = \frac{1}{3}\sum_{i} {m_{i}v_{i}^{2}}.
 
 Note that Equation :eq:`eqptens` can only be applied to pair potentials and
 central forces. Description of how contributions from other interactions
@@ -453,7 +415,7 @@ electrostatic interactions in P3M, the :math:`k`-space contribution is implement
 The implementation of the Coulomb P3M pressure is tested against LAMMPS.
 
 Four-body dihedral potentials are not included. Except of
-VIRTUAL\_SITES\_RELATIVE constraints all other
+``VIRTUAL_SITES_RELATIVE`` constraints all other
 constraints of any kind are not currently accounted for in the pressure
 calculations. The pressure is no longer correct, e.g., when particles
 are confined to a plane.
@@ -467,7 +429,7 @@ Stress Tensor
 :meth:`espressomd.analyze.Analysis.stress_tensor`
 
 Computes the volume averaged instantaneous stress tensor of the system with options which are
-described by in :meth:`espressomd.System.analysis.stress_tensor`. It is called a stress tensor but the sign convention follows that of a pressure tensor.
+described by in :meth:`espressomd.analyze.Analysis.stress_tensor`. It is called a stress tensor but the sign convention follows that of a pressure tensor.
 In general do only use it for (on average) homogeneous systems. For inhomogeneous systems you need to use the local stress tensor.
 
 The instantaneous virial stress tensor is calculated by
@@ -485,10 +447,10 @@ where the first summand is the short ranged part and the second summand is the l
 
 The short ranged part is given by:
 
-.. math :: p^\text{Coulomb, P3M, dir}_{(k,l)}= \frac{1}{4\pi \epsilon_0 \epsilon_r} \frac{1}{2V} \sum_{\vec{n}}^* \sum_{i,j=1}^N q_i q_j \left( \frac{ \mathrm{erfc}(\beta |\vec{r}_j-\vec{r}_i+\vec{n}|)}{|\vec{r}_j-\vec{r}_i+\vec{n}|^3} +\frac{2\beta \pi^{-1/2} \exp(-(\beta |\vec{r}_j-\vec{r}_i+\vec{n}|)^2)}{|\vec{r}_j-\vec{r}_i+\vec{n}|^2} \right) (\vec{r}_j-\vec{r}_i+\vec{n})_k (\vec{r}_j-\vec{r}_i+\vec{n})_l,
+.. math :: p^\text{Coulomb, P3M, dir}_{(k,l)}= \frac{1}{4\pi \epsilon_0 \epsilon_r} \frac{1}{2V} \sum_{\vec{n}}^* \sum_{i,j=1}^N q_i q_j \left( \frac{ \mathrm{erfc}(\beta |\vec{r}_j-\vec{r}_i+\vec{n}|)}{|\vec{r}_j-\vec{r}_i+\vec{n}|^3} + \\ \frac{2\beta \pi^{-1/2} \exp(-(\beta |\vec{r}_j-\vec{r}_i+\vec{n}|)^2)}{|\vec{r}_j-\vec{r}_i+\vec{n}|^2} \right) (\vec{r}_j-\vec{r}_i+\vec{n})_k (\vec{r}_j-\vec{r}_i+\vec{n})_l,
 
-where :math:`\beta` is the P3M splitting parameter, :math:`\vec{n}` identifies the periodic images, the asterix denotes that terms with :math:`\vec{n}=\vec{0}` and i=j are omitted.
-The long ranged (kspace) part is given by:
+where :math:`\beta` is the P3M splitting parameter, :math:`\vec{n}` identifies the periodic images, the asterisk denotes that terms with :math:`\vec{n}=\vec{0}` and i=j are omitted.
+The long ranged (k-space) part is given by:
 
 .. math :: p^\text{Coulomb, P3M, rec}_{(k,l)}= \frac{1}{4\pi \epsilon_0 \epsilon_r} \frac{1}{2 \pi V^2} \sum_{\vec{k} \neq \vec{0}} \frac{\exp(-\pi^2 \vec{k}^2/\beta^2)}{\vec{k}^2} |S(\vec{k})|^2 \cdot (\delta_{k,l}-2\frac{1+\pi^2\vec{k}^2/\beta^2}{\vec{k}^2} \vec{k}_k \vec{k}_l),
 
@@ -500,35 +462,6 @@ That means the contributions are not easy to interpret! Those are the contributi
 
 Note that the angular velocities of the particles are not included in
 the calculation of the stress tensor.
-
-.. _Local Stress Tensor:
-
-Local Stress Tensor
-~~~~~~~~~~~~~~~~~~~
-
-.. todo:: This feature is not tested.
-
-:meth:`espressomd.analyze.Analysis.local_stress_tensor`
-
-A cuboid is defined in the system and divided into bins.
-For each of these bins an instantaneous stress tensor is calculated using the Irving Kirkwood method.
-That is, a given interaction contributes towards the stress tensor in a bin proportional to the fraction of the line connecting the two particles within that bin.
-
-If the P3M and MMM1D electrostatic methods are used, these interactions
-are not included in the local stress tensor. The DH and RF methods, in
-contrast, are included. Concerning bonded interactions only two body
-interactions (FENE, Harmonic) are included (angular and dihedral are
-not). For all electrostatic interactions only the real space part is
-included.
-
-Care should be taken when using constraints of any kind, since these are
-not accounted for in the local stress tensor calculations.
-
-The command is implemented in parallel.
-
-{ { LocalStressTensor } { { } { } } }
-
-specifying the local pressure tensor in each bin.
 
 .. _Chains:
 
@@ -695,11 +628,11 @@ the script level and back, which produces a significant overhead when
 performed too often.
 
 Some observables in the core have their corresponding counterparts in
-the :mod:`espressomd.analysis` module. However, only the core-observables can be used
+the :mod:`espressomd.analyze` module. However, only the core-observables can be used
 on the fly with the toolbox of the correlator and on the fly analysis of
 time series.
 Similarly, some special cases of using the correlator have
-their redundant counterparts in :mod:`espressomd.analysis`,
+their redundant counterparts in :mod:`espressomd.analyze`,
 but the correlator provides a general and
 versatile toolbox which can be used with any implemented
 core-observables.
@@ -736,60 +669,81 @@ which the observable should take into account.
 
 The current value of an observable can be obtained using its calculate()-method::
 
-    print(par_pos.calculate())
+    print(part_pos.calculate())
 
 .. _Available observables:
 
 Available observables
 ~~~~~~~~~~~~~~~~~~~~~
 
-The following observables are available:
+The following list contains some of the available observables. You can find documentation for
+all available observables in :mod:`espressomd.observables`.
 
-- Observables working on a given set of particles specified as follows
+- Observables working on a given set of particles:
 
-   - ParticlePositions: Positions of the particles, in the format
-     :math:`x_1,\ y_1,\ z_1,\ x_2,\ y_2,\ z_2,\ \dots\ x_n,\ y_n,\ z_n`.
-     The particles are ordered according to the list of ids passed to the observable.
-   - ParticleVelocities: Velocities of the particles in the form
-     :math:`v_{x1},\ v_{y1},\ v_{z1},\ v_{x2},\ v_{y2},\ v_{z2},\ \dots\ v_{xn},\ v_{yn},\ v_{zn}`.
-     The particles are ordered according to the list of ids passed to the observable.
-   - ParticleForces: Forces on the particles in the form
-     :math:`f_{x1},\ f_{y1},\ f_{z1},\ f_{x2},\ f_{y2},\ f_{z2},\ \dots\ f_{xn},\ f_{yn},\ f_{zn}`.
-   - ParticleBodyVelocities: the particles' velocities in their respective body-fixed frames (as per their orientation in space stored in their quaternions).
-     :math:`v_{x1},\ v_{y1},\ v_{z1},\ v_{x2},\ v_{y2},\ v_{z2},\ \dots\ v_{xn},\ v_{yn},\ v_{zn}`.
-     The particles are ordered according to the list of ids passed to the observable.
-   - ParticleAngularVelocities: The particles' angular velocities in the space-fixed frame
-     :math:`\omega^x_1,\ \omega^y_1,\ \omega^z_1,\ \omega^x_2,\ \omega^y_2,\ \omega^z_2, \dots\ \omega^x_n,\ \omega^y_n,\ \omega^z_n`.
-     The particles are ordered according to the list of ids passed to the observable.
-   - ParticleBodyAngularVelocities: As above, but in the particles' body-fixed frame.
-   - ParticleCurrent: Product of the particles' velocity and charge
-     :math:`m_1 v^x_1, m_1 v^y_1, m_1 v^z_1, \ldots`
-     The particles are ordered according to the list of ids passed to the observable.
-   - Current: Total current of the system
-     :math:`\sum_i m_i v^x_i, \sum_i m_i v^y_i, \sum_i m_i v^z_i, \ldots`
-   - DipoleMoment: Total electric dipole moment of the system obtained based on unfolded positions
-     :math:`\sum_i q_i r^x_i, \sum_i q_i r^y_i, \sum_i q_i r^z_i`
-   - MagneticDipoleMoment: Total magnetic dipole moment of the system based on the :attr:`espressomd.particle_data.ParticleHandle.dip` property.
-     :math:`\sum_i \mu^x_i, \sum_i \mu^y_i, \sum_i \mu^z_i`
-   - ComPosition: The system's center of mass based on unfolded coordinates
-     :math:`\frac{1}{\sum_i m_i} \left( \sum_i m_i r^x_i, \sum_i m_i r^y_i, \sum_i m_i r^z_i\right)`
-   - ComVelocity: Velocity of the center of mass
-     :math:`\frac{1}{\sum_i m_i} \left( \sum_i m_i v^x_i, \sum_i m_i v^y_i, \sum_i m_i v^z_i\right)`
-   - ComForce: Sum of the forces on the particles
-     :math:`\sum_i f^x_i, \sum_i f^y_i, \sum_i f^z_i`
+   - :class:`~espressomd.observables.ParticlePositions`: Positions of the particles
 
-- Profile observables sampling the spatial profile of various quantities
+   - :class:`~espressomd.observables.ParticleVelocities`: Velocities of the particles
 
-   -  DensityProfile
+   - :class:`~espressomd.observables.ParticleForces`: Forces on the particles
 
-   -  FluxDensityProfile
+   - :class:`~espressomd.observables.ParticleBodyVelocities`: The particles' velocities in their respective body-fixed frames (as per their orientation in space stored in their quaternions).
 
-   -  ForceDensityProfile
+   - :class:`~espressomd.observables.ParticleAngularVelocities`: The particles' angular velocities in the space-fixed frame
 
-   -  LBVelocityProfile
+   - :class:`~espressomd.observables.ParticleBodyAngularVelocities`: As above, but in the particles' body-fixed frame.
+
+- Observables working on a given set of particles and returning reduced quantities:
+
+   - :class:`~espressomd.observables.Current`: Total current of the system
+
+   - :class:`~espressomd.observables.DipoleMoment`: Total electric dipole moment of the system obtained based on unfolded positions
+
+   - :class:`~espressomd.observables.MagneticDipoleMoment`: Total magnetic dipole moment of the system based on the :attr:`espressomd.particle_data.ParticleHandle.dip` property.
+
+   - :class:`~espressomd.observables.ComPosition`: The system's center of mass based on unfolded coordinates
+
+   - :class:`~espressomd.observables.ComVelocity`: Velocity of the center of mass
+
+   - :class:`~espressomd.observables.ComForce`: Sum of the forces on the particles
+
+   - :class:`~espressomd.observables.ParticleDistances`: Distances between particles on a polymer chain.
+
+   - :class:`~espressomd.observables.BondAngles`: Angles between bonds on a polymer chain.
+
+   - :class:`~espressomd.observables.BondDihedrals`: Dihedral angles between bond triples on a polymer chain.
+
+   - :class:`~espressomd.observables.CosPersistenceAngles`: Cosine of angles between bonds. The ``i``-th value in the result vector corresponds to the cosine of the angle between
+     bonds that are separated by ``i`` bonds. This observable might be useful for measuring the persistence length of a polymer.
+
+- Profile observables sampling the spatial profile of various quantities:
+
+   - :class:`~espressomd.observables.DensityProfile`
+
+   - :class:`~espressomd.observables.FluxDensityProfile`
+
+   - :class:`~espressomd.observables.ForceDensityProfile`
+
+   - :class:`~espressomd.observables.LBVelocityProfile`
+
+- Observables sampling the cylindrical profile of various quantities:
+
+   - :class:`~espressomd.observables.CylindricalDensityProfile`
+
+   - :class:`~espressomd.observables.CylindricalFluxDensityProfile`
+
+   - :class:`~espressomd.observables.CylindricalVelocityProfile`
+
+   - :class:`~espressomd.observables.CylindricalLBFluxDensityProfileAtParticlePositions`
+
+   - :class:`~espressomd.observables.CylindricalLBVelocityProfileAtParticlePositions`
+
 
 - System-wide observables
-  StressTensor: Total stress tensor (see :ref:`stress tensor`)
+
+   - :class:`~espressomd.observables.StressTensor`: Total stress tensor (see :ref:`stress tensor`)
+
+   - :class:`~espressomd.observables.DPDStress`
 
 
 
@@ -807,8 +761,8 @@ are of the form
 
 .. math::
 
-   C(\tau) = \left<A\left(t\right) \otimes B\left(t+\tau\right)\right>\,,
-   \label{eq:corr.def}
+   C(\tau) = \left<A\left(t\right) \otimes B\left(t+\tau\right)\right>
+
 
 where :math:`t` is time, :math:`\tau` is the lag time (time difference)
 between the measurements of (vector) observables :math:`A` and
@@ -887,6 +841,8 @@ found its way to the Fluorescence Correlation Spectroscopy
 Smit :cite:`frenkel02b` describes its application for the
 special case of the velocity autocorrelation function.
 
+.. _fig_correlator_scheme:
+
 .. figure:: figures/correlator_scheme.png
    :scale: 50 %
    :alt: Schematic representation of buffers in the correlator.
@@ -894,17 +850,17 @@ special case of the velocity autocorrelation function.
    Schematic representation of buffers in the correlator.
 
 Let us consider a set of :math:`N` observable values as schematically
-shown in figure [fig:dataSet], where a value of index :math:`i` was
-measured in time :math:`i\delta t`. We are interested in computing the
-correlation function according to equation  for a range lag times
-:math:`\tau = (i-j)\delta t` between the measurements :math:`i` and
-:math:`j`. To simplify the notation, we further drop :math:`\delta t`
-when referring to observables and lag times.
+shown in the figure above, where a value of index :math:`i` was
+measured at times :math:`i\delta t`. We are interested in computing the
+correlation function for a range 
+of lag times :math:`\tau = (i-j)\delta t` between the measurements 
+:math:`i` and :math:`j`. To simplify the notation, we drop
+:math:`\delta t` when referring to observables and lag times.
 
 The trivial implementation takes all possible pairs of values
 corresponding to lag times
 :math:`\tau \in [{\tau_{\mathrm{min}}}:{\tau_{\mathrm{max}}}]`. Without
-loss of generality, let us further consider
+loss of generality, we consider
 :math:`{\tau_{\mathrm{min}}}=0`. The computational effort for such an
 algorithm scales as
 :math:`{\cal O} \bigl({\tau_{\mathrm{max}}}^2\bigr)`. As a rule of
@@ -912,8 +868,10 @@ thumb, this is feasible if :math:`{\tau_{\mathrm{max}}}< 10^3`. The
 multiple tau correlator provides a solution to compute the correlation
 functions for arbitrary range of the lag times by coarse-graining the
 high :math:`\tau` values. It applies the naive algorithm to a relatively
-small range of lag times :math:`\tau \in [0:p-1]`. This we refer to as
-compression level 0. To compute the correlations for lag times
+small range of lag times :math:`\tau \in [0:p-1]` 
+(:math:`p` corresponds to parameter ``tau_lin``). 
+This we refer to as compression level 0. 
+To compute the correlations for lag times
 :math:`\tau \in [p:2(p-1)]`, the original data are first coarse-grained,
 so that :math:`m` values of the original data are compressed to produce
 a single data point in the higher compression level. Thus the lag time

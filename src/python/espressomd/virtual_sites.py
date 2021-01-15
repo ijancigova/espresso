@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2018 The ESPResSo project
+# Copyright (C) 2010-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -14,54 +14,58 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+from .__init__ import has_features
 from .script_interface import ScriptInterfaceHelper, script_interface_register
 
+if has_features("VIRTUAL_SITES"):
+    @script_interface_register
+    class ActiveVirtualSitesHandle(ScriptInterfaceHelper):
 
-@script_interface_register
-class VirtualSitesOff(ScriptInterfaceHelper):
+        """Handle for the virtual sites implementation active in the core
 
-    """Virtual sites implementation which does nothing (default)"""
-    _so_name = "VirtualSites::VirtualSitesOff"
+        This should not be used directly.
 
+        Attributes
+        ----------
+        implementation :
+            instance of a virtual sites implementation
 
-@script_interface_register
-class VirtualSitesInertialessTracers(ScriptInterfaceHelper):
+        """
+        _so_name = "VirtualSites::ActiveVirtualSitesHandle"
 
-    """Virtual sites which are advected with an lb fluid without inertia. Forces are on them are transferred to the fluid instantly.
+    @script_interface_register
+    class VirtualSitesOff(ScriptInterfaceHelper):
 
-    """
-    _so_name = "VirtualSites::VirtualSitesInertialessTracers"
-
-
-@script_interface_register
-class VirtualSitesRelative(ScriptInterfaceHelper):
-
-    """Virtual sites implementation placing virtual sites relative to other particles.
-       See :ref:`Rigid arrangements of particles` for details.
-
-       Attributes
-       ----------
-       have_velocity : :obj:`bool`
-           Determines whether the velocity of the virtual sites is calculated.
-           This carries a performance cost.
-
-       Attributes can be set on the instance or passed to the constructor as
-       keyword arguments.
-
-    """
-    _so_name = "VirtualSites::VirtualSitesRelative"
+        """Virtual sites implementation which does nothing (default)"""
+        _so_name = "VirtualSites::VirtualSitesOff"
 
 
-@script_interface_register
-class ActiveVirtualSitesHandle(ScriptInterfaceHelper):
+if has_features("VIRTUAL_SITES_INERTIALESS_TRACERS"):
+    @script_interface_register
+    class VirtualSitesInertialessTracers(ScriptInterfaceHelper):
 
-    """Handle for the virtual sites implementation active in the core
+        """Virtual sites which are advected with an lb fluid without inertia.
+        Forces are on them are transferred to the fluid instantly.
 
-       This should not be used directly.
+        """
+        _so_name = "VirtualSites::VirtualSitesInertialessTracers"
 
-       Attributes
-       ----------
-       implementation : instance of a virtual sites implementation
 
-    """
-    _so_name = "VirtualSites::ActiveVirtualSitesHandle"
+if has_features("VIRTUAL_SITES_RELATIVE"):
+    @script_interface_register
+    class VirtualSitesRelative(ScriptInterfaceHelper):
+
+        """Virtual sites implementation placing virtual sites relative to other
+        particles. See :ref:`Rigid arrangements of particles` for details.
+
+        Attributes can be set on the instance or passed to the constructor as
+        keyword arguments.
+
+        Attributes
+        ----------
+        have_velocity : :obj:`bool`
+            Determines whether the velocity of the virtual sites is calculated.
+            This carries a performance cost.
+
+        """
+        _so_name = "VirtualSites::VirtualSitesRelative"

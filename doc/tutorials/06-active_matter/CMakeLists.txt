@@ -1,13 +1,9 @@
-get_filename_component(BASENAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+file(COPY "EXERCISES" DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/)
+file(COPY "SOLUTIONS" DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/)
+file(COPY "FIGURES" DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/)
 
-add_custom_command( 
-  OUTPUT ${BASENAME}.pdf
-  COMMAND sh ../../latexit.sh
-          ${CMAKE_CURRENT_SOURCE_DIR}:${CMAKE_CURRENT_SOURCE_DIR}/../common
-          ${BASENAME}
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${BASENAME}.tex
-          ${CMAKE_CURRENT_SOURCE_DIR}
-          ${CMAKE_CURRENT_SOURCE_DIR}/../common
-)
+configure_file(06-active_matter.ipynb ${CMAKE_CURRENT_BINARY_DIR}/06-active_matter.ipynb COPYONLY)
 
-add_custom_target(tutorials_06 DEPENDS ${BASENAME}.pdf)
+add_custom_target(tutorials_06)
+
+nb_export(TUTORIAL tutorials_06 FILE "06-active_matter.ipynb" HTML_RUN)

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013-2018 The ESPResSo project
+# Copyright (C) 2013-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -16,46 +16,28 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from __future__ import print_function, absolute_import
 cimport numpy as np
 cimport cython
 import numpy as np
-from cpython.version cimport PY_MAJOR_VERSION
 from libcpp.vector cimport vector
+include "myconfig.pxi"
 
-cdef extern from "stdlib.h":
-    void free(void * ptr)
-    void * malloc(size_t size)
-    void * realloc(void * ptr, size_t size)
 
-cdef np.ndarray create_nparray_from_int_list(int_list * il):
+cdef np.ndarray create_nparray_from_int_list(const List[int] & il):
     """
     Returns a numpy array from an int list struct which is provided as argument.
 
     Parameters
     ----------
-    int_list : int_list* which is to be converted
+    List[int] : List[int]* which is to be converted
 
     """
-    numpyArray = np.zeros(il.n)
-    for i in range(il.n):
-        numpyArray[i] = il.e[i]
+    numpyArray = np.zeros(il.size())
+    for i in range(il.size()):
+        numpyArray[i] = il[i]
     return numpyArray
 
-cdef np.ndarray create_nparray_from_double_list(double_list * dl):
-    """
-    Returns a numpy array from an double list struct which is provided as argument.
-    Parameters
-    ----------
-    dl : double_list* which is to be converted
-
-    """
-    numpyArray = np.zeros(dl.n)
-    for i in range(dl.n):
-        numpyArray[i] = dl.e[i]
-    return numpyArray
-
-cdef int_list create_int_list_from_python_object(obj):
+cdef List[int] create_int_list_from_python_object(obj):
     """
     Returns a int list pointer from a python object which supports subscripts.
 
@@ -64,11 +46,11 @@ cdef int_list create_int_list_from_python_object(obj):
     obj : python object which supports subscripts
 
     """
-    cdef int_list il
+    cdef List[int] il
     il.resize(len(obj))
 
     for i in range(len(obj)):
-        il.e[i] = obj[i]
+        il[i] = obj[i]
 
     return il
 
@@ -79,15 +61,15 @@ cpdef check_type_or_throw_except(x, n, t, msg):
     checking is done on the elements, and all elements are checked. Integers
     are accepted when a float was asked for.
 
-     """
+    """
     # Check whether x is an array/list/tuple or a single value
     if n > 1:
         if hasattr(x, "__getitem__"):
             for i in range(len(x)):
                 if not isinstance(x[i], t):
                     if not ((t == float and is_valid_type(x[i], int))
-                      or (t == float and issubclass(type(x[i]), np.integer))) \
-                      and not (t == int and issubclass(type(x[i]), np.integer)):
+                            or (t == float and issubclass(type(x[i]), np.integer))) \
+                            and not (t == int and issubclass(type(x[i]), np.integer)):
                         raise ValueError(
                             msg + " -- Item " + str(i) + " was of type " + type(x[i]).__name__)
         else:
@@ -97,7 +79,8 @@ cpdef check_type_or_throw_except(x, n, t, msg):
     else:
         # N=1 and a single value
         if not isinstance(x, t):
-            if not (t == float and is_valid_type(x, int)) and not (t == int and issubclass(type(x), np.integer)):
+            if not (t == float and is_valid_type(x, int)) and not (
+                    t == int and issubclass(type(x), np.integer)):
                 raise ValueError(msg + " -- Got an " + type(x).__name__)
 
 
@@ -164,14 +147,12 @@ def to_str(s):
     s : char*
 
     """
-    if type(s) is unicode:
+    if isinstance(s, unicode):
         return < unicode > s
-    elif PY_MAJOR_VERSION >= 3 and isinstance(s, bytes):
+    elif isinstance(s, bytes):
         return ( < bytes > s).decode('ascii')
-    elif isinstance(s, unicode):
-        return unicode(s)
     else:
-        return s
+        raise ValueError('Unknown string type {}'.format(type(s)))
 
 
 class array_locked(np.ndarray):
@@ -249,6 +230,18 @@ Use numpy.copy(<ESPResSo array property>) to get a writable copy."
     def __ixor__(self, val):
         raise ValueError(array_locked.ERR_MSG)
 
+
+cdef make_array_locked(Vector3d v):
+    return array_locked([v[0], v[1], v[2]])
+
+
+cdef Vector3d make_Vector3d(a):
+    cdef Vector3d v
+    for i, ai in enumerate(a):
+        v[i] = ai
+    return v
+
+
 cpdef handle_errors(msg):
     """
     Gathers runtime errors.
@@ -260,48 +253,15 @@ cpdef handle_errors(msg):
 
     """
     errors = mpi_gather_runtime_errors()
+    # print all errors and warnings
     for err in errors:
         err.print()
 
+    # raise an exception with the first error
     for err in errors:
-    # Cast because cython does not support typed enums completely
-        if < int > err.level() == <int > ERROR:
-            raise Exception("{}: {}".format(msg, err.format()))
-
-
-def get_unravelled_index(len_dims, n_dims, flattened_index):
-    """
-    Getting the unraveled index for a given flattened index in ``n_dims`` dimensions.
-
-    Parameters
-    ----------
-    len_dims : array_like :obj:`int`
-               The length of each of the ``n_dims`` dimensions.
-    n_dims : :obj:`int`
-             The number of dimensions.
-    flattened_index : :obj:`int`
-                      The flat index that should be converted back to an
-                      ``n_dims`` dimensional index.
-
-    Returns
-    -------
-    unravelled_index : array_like :obj:`int`
-                       An array containing the index for each dimension.
-
-    """
-    cdef vector[int] c_len_dims
-    for i in range(len(len_dims)):
-        c_len_dims.push_back(len_dims[i])
-    cdef int c_n_dims = n_dims
-    cdef int c_flattened_index = flattened_index
-    cdef vector[int] unravelled_index_out
-    unravelled_index_out.assign(n_dims, 0)
-    unravel_index(c_len_dims.data(), c_n_dims,
-                  c_flattened_index, unravelled_index_out.data())
-    out = np.empty(n_dims)
-    for i in range(n_dims):
-        out[i] = unravelled_index_out[i]
-    return out
+        # Cast because cython does not support typed enums completely
+        if < int > err.level() == < int > ERROR:
+            raise Exception("{}: {}".format(msg, to_str(err.format())))
 
 
 def nesting_level(obj):
@@ -310,7 +270,7 @@ def nesting_level(obj):
 
     """
 
-    if not isinstance(obj, (list, tuple)):
+    if not isinstance(obj, (list, tuple, np.ndarray)):
         return 0
 
     obj = list(obj)
@@ -327,10 +287,36 @@ def is_valid_type(value, t):
     Extended checks for numpy int and float types.
 
     """
-
+    if value is None:
+        return False
     if t == int:
         return isinstance(value, (int, np.integer, np.long))
     elif t == float:
-        return isinstance(value, (float, np.float16, np.float32, np.float64, np.float128, np.longdouble))
+        if hasattr(np, 'float128'):
+            return isinstance(
+                value, (float, np.float16, np.float32, np.float64, np.float128, np.longdouble))
+        return isinstance(
+            value, (float, np.float16, np.float32, np.float64, np.longdouble))
     else:
         return isinstance(value, t)
+
+
+def requires_experimental_features(reason):
+    """Class decorator which makes instantiation conditional on EXPERIMENTAL_FEATURES being defined in myconfig.hpp."""
+
+    def exception_raiser(self, *args, **kwargs):
+        raise Exception(
+            "Class " +
+            self.__class__.__name__ +
+            " is experimental. Define EXPERIMENTAL_FEATURES in myconfig.hpp to use it.\nReason: " +
+            reason)
+
+    def modifier(cls):
+        cls.__init__ = exception_raiser
+        return cls
+
+    IF not EXPERIMENTAL_FEATURES:
+        return modifier
+    ELSE:
+        # Return original class
+        return lambda x: x

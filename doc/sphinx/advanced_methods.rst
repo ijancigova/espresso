@@ -10,7 +10,7 @@ Advanced Methods
 Creating bonds when particles collide
 -------------------------------------
 
-Please cite :cite:`espresso2` when using dynamic bonding.
+Please cite :cite:`arnold13a` when using dynamic bonding.
 
 With the help of this feature, bonds between particles can be created
 automatically during the simulation, every time two particles collide.
@@ -21,7 +21,7 @@ The collision detection is controlled via the :attr:`espressomd.system.System.co
 
 Several modes are available for different types of binding.
 
-* ``"bind_centers"``: adds a pair-bond between two particles at their first collision. By making the bonded interaction `stiff` enough, the particles can be held together after the collision. Note that the particles can still slide on each others' surface, as the pair bond is not directional. This mode is set up as follows::
+* ``"bind_centers"``: adds a pair-bond between two particles at their first collision. By making the bonded interaction *stiff* enough, the particles can be held together after the collision. Note that the particles can still slide on each others' surface, as the pair bond is not directional. This mode is set up as follows::
 
     import espressomd
     from espressomd.interactions import HarmonicBond
@@ -64,13 +64,13 @@ Several modes are available for different types of binding.
     * ``part_type_vs`` is the particle type assigned to the virtual sites created on collision. In nearly all cases, no non-bonded interactions should be defined for this particle type.
     * ``vs_placement`` controls, where on the line connecting the centers of the colliding particles, the virtual sites are placed. A value of 0 means that the virtual sites are placed at the same position as the colliding particles on which they are based. A value of 0.5 will result in the virtual sites being placed ad the mid-point between the two colliding particles. A value of 1 will result the virtual site associated to the first colliding particle to be placed at the position of the second colliding particle. In most cases, 0.5, is a good choice. Then, the bond connecting the virtual sites should have an equilibrium length of zero.
 
-* ``"glue_to_surface"``: This mode is used to irreversibly attach small particles to the surface of a big particle. It is asymmetric in that several small particles can be bound to a big particle but not vice versa. The small particles can change type after collision to make them `inert`. On collision, a single virtual site is placed and related to the big particle. Then, a bond (``bond_centers``) connects the big and the small particle. A second bond (``bond_vs``) connects the virtual site and the small particle. Further required parameters are:
+* ``"glue_to_surface"``: This mode is used to irreversibly attach small particles to the surface of a big particle. It is asymmetric in that several small particles can be bound to a big particle but not vice versa. The small particles can change type after collision to make them *inert*. On collision, a single virtual site is placed and related to the big particle. Then, a bond (``bond_centers``) connects the big and the small particle. A second bond (``bond_vs``) connects the virtual site and the small particle. Further required parameters are:
 
-  * ``part_type_to_attach_vs_to``: Type of the particle to which the virtual site is attached, i.e., the `big` particle.
-  * ``part_type_to_be_glued``: Type of the particle bound to the virtual site (the `small` particle).
-  * ``part_type_after_glueing``: The type assigned to the particle bound to the virtual site (`small` particle) after the collision.
+  * ``part_type_to_attach_vs_to``: Type of the particle to which the virtual site is attached, i.e., the *big* particle.
+  * ``part_type_to_be_glued``: Type of the particle bound to the virtual site (the *small* particle).
+  * ``part_type_after_glueing``: The type assigned to the particle bound to the virtual site (*small* particle) after the collision.
   * ``part_type_vs``: Particle type assigned to the virtual site created during the collision.
-  * ``distance_glued_particle_to_vs``: Distance of the virtual site to the particle being bound to it (`small` particle).
+  * ``distance_glued_particle_to_vs``: Distance of the virtual site to the particle being bound to it (*small* particle).
 
   Note: When the type of a particle is changed on collision, this makes the
   particle inert with regards to further collision. Should a particle  of
@@ -119,166 +119,6 @@ The following limitations currently apply for the collision detection:
 * The ``"bind at point of collision"`` approach cannot handle collisions
   between virtual sites
 
-.. _Swimmer Reactions:
-
-Swimmer Reactions
------------------
-
-
-With the help of the feature ``SWIMMER_REACTIONS``, one can define three particle types to act as reactant (e.g. :math:`\mathrm{H_2 O_2}`), catalyzer (e.g. platinum), and product (e.g. :math:`\mathrm{O_2}` and :math:`\mathrm{H_2 O}`). The current setup allows one to simulate active swimmers and their chemical propulsion.
-
-For a Janus swimmer consisting of platinum on one hemisphere and gold on the other hemisphere, both surfaces catalytically induce a reaction. We assume an initial abundance of hydrogen peroxide and absence of products, so that back (recombination) reactions seldom occur at the surface. A typical model for the propulsion of such a particle assumes
-
-.. math::
-
-    \begin{aligned}
-      \mathrm{H_2 O_2} &\xrightarrow{\text{Pt}} \mathrm{2 H^{+} + 2 e^{-} + O_2} \\
-      \mathrm{2 H^{+} + 2 e^{-} + H_2 O_2} &\xrightarrow{\text{Au}} \mathrm{2 H_2 O}
-    \end{aligned}
-
-That is, catalytic surfaces induce a reactions that produce charged species by consuming hydrogen peroxide. It is the change in distribution of charged species that leads to motion of the swimmer, a process referred to as self-electrophoresis. A minimal model for this would be
-
-.. math::
-
-    \begin{aligned}
-      A &\xrightarrow{C^{+}} B \\
-      B &\xrightarrow{C^{-}} A
-    \end{aligned}
-
-where on the upper half of the catalyst :math:`C^{+}` a species :math:`A` is converted into :math:`B`, and on the lower half :math:`C^{-}` the opposite reaction takes place. Note that when :math:`A` and :math:`B` are charged, this reaction conserves charge, provided the rates are equal. Note that this feature uses the word catalyst in a meaning which cannot be brought into agreement with the definition of a catalyst. If the catalyst :math:`C^{+}` catalyzes (on average) the reaction, where :math:`A` is converted to :math:`B`, then it is impossible that a catalyst :math:`C^{-}` performs (on average) the reverse reaction. For the example with hydrogen peroxide this would mean that hydrogen peroxide is created spontaneously using a catalyst (under the same environment where another catalyst wants to split hydrogen peroxide). This is chemically impossible. What is meant to be modeled is that hydrogen peroxide is constantly flowing into the system from the bulk and therefore it is not depleted. This behaviour cannot be modeled using a catalyst (in the defined meaning of the word catalyst).
-
-In |es| the orientation of a catalyzer particle is used to define hemispheres; half spaces going through the particle's center. The reaction region is bounded by the *reaction range*: :math:`r`. Inside the reaction range, we react only reactant-product pairs. The particles in a pair are swapped from hemisphere to another with a rate prescribed by
-
-.. math::
-
-    P_{\text{move}} = 1 - \mathrm{e}^{-k_{\mathrm{ct}}\,\Delta t} ,
-
-with the reaction rate :math:`k_{\mathrm{ct}}` and the simulation time step :math:`\Delta t`. A pair may be swapped only once per MD time step, to avoid a no-net-effect situation. That is, we allow an exchange move only when the following conditions are met:
-
-1. Both partners of the reactant-product pair have to reside within the reaction range.
-2. The product has to reside in the upper half-space of the reaction range.
-3. The reactant has to reside in the lower half-space of the reaction range.
-
-Self-propulsion is achieved by imposing an interaction asymmetry between the partners of a swapped pair. That is, the heterogeneous distribution of chemical species induced by the swapping leads to a net force on the particle, counter balanced by friction.
-
-To set up the system for catalytic reactions the class :class:`espressomd.reaction.Reaction`
-can be used. ::
-
-    from espressomd.reaction import Reaction
-
-    system = espressomd.System()
-
-    # setting up particles etc
-
-    r = Reaction(product_type=1, reactant_type=2, catalyzer_type=0,
-                 ct_range=2, ct_rate=0.2, eq_rate=0)
-    r.start()
-    r.stop()
-
-    print r
-
-* the first invocation of ``Reaction``, in the above example,  defines a
-  reaction with particles of type number 2 as reactant, type 0 as catalyzer and
-  type 1 as product [#1]_. The catalytic reaction rate constant is given by :math:`\mathrm{ct\_rate}`
-  [#2]_ and to override the default rate constant for the equilibrium reaction
-  ( = 0), one can specify it by as ``eq_rata``.  By default each reactant particle is checked
-  against each catalyst particle (``react_once=False``). However, when creating
-  smooth surfaces using many catalyst particles, it can be desirable to let the
-  reaction rate be independent of the surface density of these particles. That
-  is, each particle has a likelihood of reacting in the vicinity of the surface
-  (distance is less than :math:`r`) as specified by the rate constant, i.e.,
-  *not* according to :math:`P_{\text{cvt}} = 1 - \exp \left( - n k\Delta t
-  \right)`, with :math:`n` the number of local catalysts. To accomplish this,
-  each reactant is considered only once each time step by using the option
-  ``react_once=True`` . The reaction command is set up such that the different
-  properties may be influenced individually.
-
-*  ``r.stop()`` disables the reaction. Note that at the moment, there can
-   only be one reaction in the simulation.
-
-*  ``print r``  returns the current reaction parameters.
-
-In future versions of |es| the capabilities of the ``SWIMMER_REACTIONS`` feature may be generalized
-to handle multiple reactant, catalyzer, and product types, as well as
-more general reaction schemes. Other changes may involve merging the
-current implementation with the ``COLLISION_DETECTION`` feature.
-
-.. rubric:: Footnotes
-
-.. [#1]
-   Only one type of particle can be assigned to each of these three
-   reaction species and no particle type may be assigned to multiple
-   species. That is, currently does not support particles of type 1 and
-   2 both to be reactants, nor can particles of type 1 be a reactant as
-   well as a catalyst. Moreover, only one of these reactions can be
-   implemented in a single Tcl script. If, for instance, there is a
-   reaction involving particle types 1, 2, and 4, there cannot be a
-   second reaction involving particles of type 5, 6, and 8. It is
-   however possible to modify the reaction properties for a given set of
-   types during the simulation.
-
-.. [#2]
-   Currently only strictly positive values of the catalytic conversion
-   rate constant are allowed. Setting the value to zero is equivalent to
-   ``r.stop()``.
-
-..
-    .. _\`\`nemd\`\`\: Setting up non-equilibirum MD:
-
-    ``nemd``: Setting up non-equilibrium MD
-    ---------------------------------------
-
-    .. todo::
-        This is not implemented for the python interface yet
-
-    nemd exchange nemd shearrate nemd off nemd nemd profile nemd viscosity
-
-    Use NEMD (Non Equilibrium Molecular Dynamics) to simulate a system under
-    shear with help of an unphysical momentum change in two slabs in the
-    system.
-
-    Variants and will initialize NEMD. Two distinct methods exist. Both
-    methods divide the simulation box into slabs that lie parallel to the
-    x-y-plane and apply a shear in x direction. The shear is applied in the
-    top and the middle slabs. Note, that the methods should be used with a
-    DPD thermostat or in an NVE ensemble. Furthermore, you should not use
-    other special features like or inside the top and middle slabs. For
-    further reference on how NEMD is implemented into see
-    :cite:`soddeman01a`.
-
-    Variant chooses the momentum exchange method. In this method, in each
-    step the largest positive x-components of the velocity in the middle
-    slab are selected and exchanged with the largest negative x-components
-    of the velocity in the top slab.
-
-    Variant chooses the shear-rate method. In this method, the targeted
-    x-component of the mean velocity in the top and middle slabs are given
-    by
-
-    .. math:: {target\_velocity} = \pm {shearrate}\,\frac{L_z}{4}
-
-    where :math:`L_z` is the simulation box size in z-direction. During the
-    integration, the x-component of the mean velocities of the top and
-    middle slabs are measured. Then, the difference between the mean
-    x-velocities and the target x-velocities are added to the x-component of
-    the velocities of the particles in the respective slabs.
-
-    Variant will turn off NEMD, variant will print usage information of the
-    parameters of NEMD. Variant will return the velocity profile of the
-    system in x-direction (mean velocity per slab).
-
-    Variant will return the viscosity of the system, that is computed via
-
-    .. math:: \eta = \frac{F}{\dot{\gamma} L_x L_y}
-
-    where :math:`F` is the mean force (momentum transfer per unit time)
-    acting on the slab, :math:`L_x L_y` is the area of the slab and
-    :math:`\dot{\gamma}` is the shearrate.
-
-    NEMD as implemented generates a Poiseuille flow, with shear flow rate
-    varying over a finite wavelength determined by the box. For a planar
-    Couette flow (constant shear, infinite wavelength), consider using
-    Lees-Edwards boundary conditions (see ) to drive the shear.
 
 .. _Lees-Edwards boundary conditions:
 
@@ -301,7 +141,7 @@ thin shell filled with liquid (see e.g. :cite:`Peskin2002,Crowl2010,KruegerThesi
 shell is deformed by an external flow, it responds with elastic restoring
 forces which are transmitted into the fluid. In the present case, the
 inner and outer liquid are of the same type and are simulated using
-lattice Boltzmann.
+lattice-Boltzmann.
 
 Numerically, the shell is discretized by a set of marker points
 connected by triangles. The marker points are advected with *exactly*
@@ -310,12 +150,11 @@ friction coefficient (this is different from the Object-in-Fluid method
 below). We implement these marker points as virtual tracer
 particles which are not integrated using the usual velocity-Verlet
 scheme, but instead are propagated using a simple Euler algorithm with
-the local fluid velocity (if the ``IMMERSED_BOUNDARY`` feature is turned
-on).
+the local fluid velocity.
 
 The immersed boundary method consists of two components, which can be used independently:
 
-  * :ref:`Inertialess lattice Boltzmann tracers` implemented as virtual sites
+  * :ref:`Inertialess lattice-Boltzmann tracers` implemented as virtual sites
 
   * Interactions providing the elastic forces for the particles forming the surface. These are described below.
 
@@ -355,9 +194,9 @@ The comma is needed to force Python to create a tuple containing a single item.
 
 
 For a more detailed description, see e.g. Guckenberger and Gekle, J. Phys. Cond. Mat. (2017) or contact us.
-This feature probably does not work with advanced LB features such electro kinetics or Shan-Chen.
+This feature probably does not work with advanced LB features such electro kinetics.
 
-A sample script is provided in the :file:`samples/immersed_boundary` directory of the source distribution.
+A sample script is provided in the :file:`/samples/immersed_boundary/` directory of the source distribution.
 
 
 
@@ -367,26 +206,24 @@ A sample script is provided in the :file:`samples/immersed_boundary` directory o
 Object-in-fluid
 ---------------
 If you plan to use this feature, please contact the Cell-in-fluid Research Group at the
-University of Zilina:
+University of Zilina: ivan.cimrak@fri.uniza.sk or iveta.jancigova@fri.uniza.sk.
 
-| ivan.cimrak@fri.uniza.sk or iveta.jancigova@fri.uniza.sk.
+When using this module, please cite :cite:`Cimrak2014` (BibTeX key Cimrak2014 in doc/sphinx/zrefs.bib) and :cite:`Cimrak2012` (Bibtex key Cimrak2012 in doc/sphinx/zrefs.bib)
 
-  If using this module, please cite :cite:`Cimrak2014` (Bibtex key Cimrak2014 in doc/sphinx/zref.bib) and :cite:`Cimrak2012` (Bibtex key Cimrak2012 in doc/sphinx/zref.bib)
+This documentation introduces the features of module Object-in-fluid (OIF).
+Even though ESPResSo was not primarily intended to work with closed
+objects, it is a flexible package and appears very suitable when one
+wants to model closed objects with elastic properties, especially if
+they are immersed in a moving fluid. Here we describe the module
+itself and offer some additional information to get you started with. Additionally, we
+provide a step by step tutorial that will show you how to use this
+module.
 
-| This documentation introduces the features of module Object-in-fluid
-  (OIF). Even though ESPResSo was not primarily intended to work with closed
-  objects, it is a flexible package and appears very suitable when one
-  wants to model closed objects with elastic properties, especially if
-  they are immersed in a moving fluid. Here we describe the module
-  itself and offer some additional information to get you started with. Additionally, we
-  provide a step by step tutorial that will show you how to use this
-  module.
-
-| The OIF module was developed for simulations of red blood cells
-  flowing through microfluidic devices and therefore the elasticity
-  features were designed with this application in mind. However, they
-  are completely tunable and can be modified easily to allow the user to
-  model any elastic object moving in fluid flow.
+The OIF module was developed for simulations of red blood cells
+flowing through microfluidic devices and therefore the elasticity
+features were designed with this application in mind. However, they
+are completely tunable and can be modified easily to allow the user to
+model any elastic object moving in fluid flow.
 
 
 
@@ -398,28 +235,29 @@ University of Zilina:
 Triangulations of elastic objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-| To create an elastic object, we need a triangulation of the surface of
-  this object. Sample triangulations are provided at
-  http://cell-in-fluid.kst.fri.uniza.sk/en/content/oif-espresso. User
-  can create his/her own meshes, for example in gmsh, salome or any other meshing software. The
-  required format is as follows:
+To create an elastic object, we need a triangulation of the surface of
+this object. Sample triangulations are provided at
+`http://cell-in-fluid.fri.uniza.sk/en/content/oif-espresso
+<https://web.archive.org/web/20180719231829/http://cell-in-fluid.fri.uniza.sk/en/content/oif-espresso>`_.
+Users can create their own meshes, for example in gmsh, salome or any other meshing software. The
+required format is as follows:
 
-| The file :file:`some_nodes.dat` should contain triplets of floats (one
-  triplet per line), where each triplet represents the :math:`x, y` and
-  :math:`z` coordinates of one node of the surface triangulation. No
-  additional information should be written in this file, so this means
-  that the number of lines equals to the number of surface nodes. The
-  coordinates of the nodes should be specified in such a way that the
-  approximate center of mass of the object corresponds to the origin
-  (0,0,0). This is for convenience when placing the objects at desired
-  locations later.
+The file :file:`some_nodes.dat` should contain triplets of floats (one
+triplet per line), where each triplet represents the :math:`x, y` and
+:math:`z` coordinates of one node of the surface triangulation. No
+additional information should be written in this file, so this means
+that the number of lines equals to the number of surface nodes. The
+coordinates of the nodes should be specified in such a way that the
+approximate center of mass of the object corresponds to the origin
+(0,0,0). This is for convenience when placing the objects at desired
+locations later.
 
-| The file :file:`some_triangles.dat` should also contain triplets of
-  numbers, this time integers. These integers refer to the IDs of the nodes in
-  the :file:`some_nodes.dat` file and specify which three nodes form a
-  triangle. Please, note that the nodes' IDs start at 0, i.e.
-  the node written in the first line of :file:`some_nodes.dat` has ID 0, the
-  node in the second line, has ID 1, etc.
+The file :file:`some_triangles.dat` should also contain triplets of
+numbers, this time integers. These integers refer to the IDs of the nodes in
+the :file:`some_nodes.dat` file and specify which three nodes form a
+triangle. Please, note that the nodes' IDs start at 0, i.e.
+the node written in the first line of :file:`some_nodes.dat` has ID 0, the
+node in the second line, has ID 1, etc.
 
 Description of sample script
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -429,11 +267,12 @@ Description of sample script
     The following features are required:
     ``LB``, ``LB_BOUNDARIES``,
     ``EXTERNAL_FORCES``,
-    ``MASS``, ``CONSTRAINTS``, ``OIF_LOCAL_FORCES``,
+    ``MASS``, ``OIF_LOCAL_FORCES``,
     ``OIF_GLOBAL_FORCES``, ``SOFT_SPHERE``, ``MEMBRANE_COLLISION``
 
 The script described in this section is available in :file:`samples/object-in-fluid/two-cells.py` and also at
-http://cell-in-fluid.kst.fri.uniza.sk/en/content/oif-espresso.
+`http://cell-in-fluid.fri.uniza.sk/en/content/oif-espresso
+<https://web.archive.org/web/20180719231829/http://cell-in-fluid.fri.uniza.sk/en/content/oif-espresso>`_.
 
 In the first few lines, the script includes several imports related to
 the red blood cell model, fluid, boundaries and interactions. Then we
@@ -539,9 +378,9 @@ transfers specified momentum onto the fluid.
 Specification of boundaries
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-| To set up the geometry of the channels, we mostly use rhomboids and
-  cylinders, but there are also other boundary types available in |es|.
-  The usage is described elsewhere.
+To set up the geometry of the channels, we mostly use rhomboids and
+cylinders, but there are also other boundary types available in |es|.
+Their usage is described elsewhere.
 
 
 |image4| |image5| |image6|
@@ -598,12 +437,12 @@ visualisation:
                         n=20,
                         out_file="output/sim1/obstacle.vtk")
 
-| Note that the method for cylinder output also has an argument ``n``.
-  This specifies number of rectangular faces on the side.
+Note that the method for cylinder output also has an argument ``n``.
+This specifies number of rectangular faces on the side.
 
-| It is a good idea to output and visualize the boundaries and objects
-  just prior to running the actual simulation, to make sure that the
-  geometry is correct and no objects intersect with any boundaries.
+It is a good idea to output and visualize the boundaries and objects
+just prior to running the actual simulation, to make sure that the
+geometry is correct and no objects intersect with any boundaries.
 
 
 
@@ -657,7 +496,7 @@ end:
 
 This simulation runs for 100 cycles. In each cycle, 500 integration
 steps are performed and output is saved into files
-*output/sim1/cell_i.vtk*. Note that they differ only by the number
+:file:`output/sim1/cell_*.vtk`. Note that they differ only by the number
 before the *.vtk* extension (this variable changes due to the ``for``
 loop) and this will allow us to animate them in the visualisation
 software. ``str`` changes the type of ``i`` from integer to string, so
@@ -667,17 +506,19 @@ printed in the terminal window and when the integration is complete, we
 should get a message about it.
 
 
-| To sum up, the proper order of setting up individual simulation
-  parts is as follows:
-| - cell types
-| - cells
-| - fluid
-| - fluid boundaries
-| - interactions
-| If cell types and cells are specified after the fluid, the simulation
-  is slower. Also, interactions can only be defined once the objects
-  and boundaries both exist. Technically, the fluid boundaries can be
-  specified before fluid, but it is really not recommended.
+To sum up, the proper order of setting up individual simulation
+parts is as follows:
+
+- cell types
+- cells
+- fluid
+- fluid boundaries
+- interactions
+
+If cell types and cells are specified after the fluid, the simulation
+is slower. Also, interactions can only be defined once the objects
+and boundaries both exist. Technically, the fluid boundaries can be
+specified before fluid, but it is really not recommended.
 
 
 
@@ -718,27 +559,27 @@ or data files for further processing and analysis.
 Visualization in ParaView
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-| For visualization we suggest the free software ParaView. All .vtk
-  files (boundaries, fluid, objects at all time steps) can be loaded at
-  the same time. The loading is a two step process, because only after
-  pressing the Apply button, are the files actually imported. Using the
-  eye icon to the left of file names, one can turn on and off the
-  individual objects and/or boundaries.
+For visualization we suggest the free software ParaView. All .vtk
+files (boundaries, fluid, objects at all time steps) can be loaded at
+the same time. The loading is a two step process, because only after
+pressing the Apply button, are the files actually imported. Using the
+eye icon to the left of file names, one can turn on and off the
+individual objects and/or boundaries.
 
-| Fluid can be visualized using Filters/Alphabetical/Glyph (or other
-  options from this menu. Please, refer to the ParaView user's guide for
-  more details).
+Fluid can be visualized using Filters/Alphabetical/Glyph (or other
+options from this menu. Please, refer to the ParaView user's guide for
+more details).
 
-| Note, that ParaView does not automatically reload the data if they
-  have been changed in the input folder, but a useful thing to know is
-  that the created filters can be "recycled". Once you delete the old
-  data, load the new data and right-click on the existing filters, you
-  can re-attach them to the new data.
+Note, that ParaView does not automatically reload the data if they
+have been changed in the input folder, but a useful thing to know is
+that the created filters can be "recycled". Once you delete the old
+data, load the new data and right-click on the existing filters, you
+can re-attach them to the new data.
 
-| It is a good idea to output and visualize the boundaries and objects
-  just prior to running the actual simulation, to make sure that the
-  geometry is correct and no objects intersect with any boundaries. This
-  would cause "particle out of range" error and crash the simulation.
+It is a good idea to output and visualize the boundaries and objects
+just prior to running the actual simulation, to make sure that the
+geometry is correct and no objects intersect with any boundaries. This
+would cause "particle out of range" error and crash the simulation.
 
 File format
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -764,15 +605,15 @@ our cells we use the following format:
     ...
     3 p390 p391 p392
 
-| where the cell has 393 surface nodes (particles). After initial
-  specification, the list of points is present, with x, y, z coordinates for
-  each. Then we write the triangulation, since that is how our
-  surface is specified. We need to know the number of triangles
-  (``num_triang``) and the each line/triangle is specified by 4 numbers
-  (so we are telling ParaView to expect 4 *  ``num_triang``  numbers in
-  the following lines. Each line begins with 3 (which stands for a
-  triangle) and three point IDs that tell us which three points (from
-  the order above) form this specific triangle.
+where the cell has 393 surface nodes (particles). After initial
+specification, the list of points is present, with x, y, z coordinates for
+each. Then we write the triangulation, since that is how our
+surface is specified. We need to know the number of triangles
+(``num_triang``) and the each line/triangle is specified by 4 numbers
+(so we are telling ParaView to expect 4 *  ``num_triang``  numbers in
+the following lines. Each line begins with 3 (which stands for a
+triangle) and three point IDs that tell us which three points (from
+the order above) form this specific triangle.
 
 
 
@@ -794,12 +635,12 @@ following lines:
     ...
     value-at-p392
 
-| This says that data for each of 393 points are coming. Next line says
-  that the data are scalar in this case, one float for each point. To
-  color code the values in the visualization, a default (red-to-blue)
-  table will be used. It is also possible to specify your own lookup
-  table. As an example, we might want to see a force magnitude in each
-  surface node
+This says that data for each of 393 points are coming. Next line says
+that the data are scalar in this case, one float for each point. To
+color code the values in the visualization, a default (red-to-blue)
+table will be used. It is also possible to specify your own lookup
+table. As an example, we might want to see a force magnitude in each
+surface node
 
 |image7|
 
@@ -847,8 +688,7 @@ triangles is given instead of number of mesh points.
     0.5
     1.0
 
-| Note - it is also possible to save (and visualize) data corresponding
-  to edges.
+Note - it is also possible to save (and visualize) data corresponding to edges.
 
 
 
@@ -1364,7 +1204,7 @@ Electrokinetics
 
 The electrokinetics setup in |es| allows for the description of
 electro-hydrodynamic systems on the level of ion density distributions
-coupled to a Lattice Boltzmann (LB) fluid. The ion density distributions
+coupled to a lattice-Boltzmann (LB) fluid. The ion density distributions
 may also interact with explicit charged particles, which are
 interpolated on the LB grid. In the following paragraph we briefly
 explain the electrokinetic model implemented in |es|, before we come to the
@@ -1382,7 +1222,7 @@ continuity, diffusion-advection, Poisson, and Navier-Stokes equations:
 
    \begin{aligned}
    \label{eq:ek-model-continuity} \frac{\partial n_k}{\partial t} & = & -\, \nabla \cdot \vec{j}_k \vphantom{\left(\frac{\partial}{\partial}\right)} ; \\
-   \label{eq:ek-model-fluxes} \vec{j}_{k} & = & -D_k \nabla n_k - \nu_k \, q_k n_k\, \nabla \Phi + n_k \vec{v}_{\mathrm{fl}} \vphantom{\left(\frac{\partial}{\partial}\right)} ; \\
+   \label{eq:ek-model-fluxes} \vec{j}_{k} & = & -D_k \nabla n_k - \nu_k \, q_k n_k\, \nabla \Phi + n_k \vec{v}_{\mathrm{fl}} \vphantom{\left(\frac{\partial}{\partial}\right)} + \sqrt{n_k}\vec{\mathcal{W}}_k; \\
    \label{eq:ek-model-poisson} \Delta \Phi & = & -4 \pi \, {l_\mathrm{B}}\, {k_\mathrm{B}T}\sum_k q_k n_k \vphantom{\left(\frac{\partial}{\partial}\right)}; \\
    \nonumber \left(\frac{\partial \vec{v}_{\mathrm{fl}}}{\partial t} + \vec{v}_{\mathrm{fl}} \cdot \vec{\nabla} \vec{v}_{\mathrm{fl}} \right) \rho_\mathrm{fl} & = & -{k_\mathrm{B}T}\, \nabla \rho_\mathrm{fl} - q_k n_k \nabla \Phi \\
    \label{eq:ek-model-velocity} & & +\, \eta \vec{\Delta} \vec{v}_{\mathrm{fl}} + (\eta / 3 + \eta_{\text{b}}) \nabla (\nabla \cdot \vec{v}_{\mathrm{fl}}) \vphantom{\left(\frac{\partial}{\partial}\right)} ; \\
@@ -1412,6 +1252,9 @@ and input parameters
 
 :math:`\nu_k`
     the mobility of species :math:`k`,
+
+:math:`\vec{\mathcal{W}}_k`
+    the white-noise term for the fluctuations of species :math:`k`,
 
 :math:`q_k`
     the charge of a single particle of species :math:`k`,
@@ -1505,11 +1348,11 @@ Initialization
         stencil='linkcentered', advection=True, fluid_coupling='friction')
     sys.actors.add(ek)
 
-.. note:: Features ``ELECTROKINETICS`` and ``LB_GPU`` required
+.. note:: Features ``ELECTROKINETICS`` and ``CUDA`` required
 
 The above is a minimal example how to initialize the LB fluid, and
-it is very similar to the lattice Boltzmann command in set-up. We
-therefore refer the reader to Chapter :ref:`Lattice Boltzmann` for details on the
+it is very similar to the lattice-Boltzmann command in set-up. We
+therefore refer the reader to Chapter :ref:`Lattice-Boltzmann` for details on the
 implementation of LB in |es| and describe only the major differences here.
 
 The first major difference with the LB implementation is that the
@@ -1524,9 +1367,9 @@ To set up a proper LB fluid using this command one has to specify at
 least the following options: ``agrid``, ``lb_density``, ``viscosity``, ``friction``, ``T``, and ``prefactor``. The other options can be
 used to modify the behavior of the LB fluid. Note that the command does
 not allow the user to set the time step parameter as is the case for the
-lattice Boltzmann command, this parameter is instead taken directly from the value set for
-:attr:`espressomd.system.System.time_step`. The LB `mass density` is set independently from the
-electrokinetic `number densities`, since the LB fluid serves only as a
+lattice-Boltzmann command, this parameter is instead taken directly from the value set for
+:attr:`espressomd.system.System.time_step`. The LB *mass density* is set independently from the
+electrokinetic *number densities*, since the LB fluid serves only as a
 medium through which hydrodynamic interactions are propagated, as will
 be explained further in the next paragraph. If no ``lb_density`` is specified, then our
 algorithm assumes ``lb_density= 1.0``. The two 'new' parameters are the temperature ``T`` at
@@ -1549,7 +1392,7 @@ stencil. For all other stencils, this choice is hardcoded. The default
 is ``"friction"``.
 
 
-The feature ``EK_ELECTROSTATIC_COUPLING`` enables the action of the electrostatic potential due to the
+``es_coupling`` enables the action of the electrostatic potential due to the
 electrokinetics species and charged boundaries on the MD particles. The
 forces on the particles are calculated by interpolation from the
 electric field which is in turn calculated from the potential via finite
@@ -1557,6 +1400,13 @@ differences. This only includes interactions between the species and
 boundaries and MD particles, not between MD particles and MD particles.
 To get complete electrostatic interactions a particles Coulomb method
 like Ewald or P3M has to be activated too.
+
+The fluctuation of the EK species can be turned on by the flag ``fluctuations``.
+This adds a white-noise term to the fluxes. The amplitude of this noise term
+can be controlled by ``fluctuation_amplitude``. To circumvent that these fluctuations
+lead to negative densities, they are modified by a smoothed Heaviside function,
+which decreases the magnitude of the fluctuation for densities close to 0.
+By default the fluctuations are turned off.
 
 .. _Diffusive Species:
 
@@ -1574,13 +1424,16 @@ valency of the particles of that species ``valency``, and an optional external
 before, the LB density is completely decoupled from the electrokinetic
 densities. This has the advantage that greater freedom can be achieved
 in matching the internal parameters to an experimental system. Moreover,
-it is possible to choose parameters for which the LB is more stable. The species has to be added to a LB fluid::
+it is possible to choose parameters for which the LB is more stable. The species can be added to a LB fluid::
 
     ek.add_species(species)
 
-The LB fluid must be set up before using
-:class:`espressomd.electrokinetics.Electrokinetics` as shown above, before a
-diffusive species can be added. The variables ``density``, ``D``, and
+One can also add the species during the initialization step of the
+:class:`espressomd.electrokinetics.Electrokinetics` by defining the list variable ``species``::
+
+    ek = espressomd.electrokinetics.Electrokinetics(species=[species], ...)
+
+The variables ``density``, ``D``, and
 ``valency`` must be set to properly initialize the diffusive species; the
 ``ext_force_density`` is optional.
 
@@ -1608,6 +1461,22 @@ rhomboid and hollowcone. We refer to the documentation of the
 the options associated to these shapes. In order to properly set up the
 boundaries, the ``charge_density`` and ``shape``
 must be specified.
+
+.. _Checkpointing:
+
+Checkpointing
+^^^^^^^^^^^^^
+::
+
+    ek.save_checkpoint(path)
+
+Checkpointing in the EK works quite similar to checkpointing in the LB, because the density is not saved within the :class:`espressomd.checkpointing` object. However one should keep in mind, that the EK not only saves the density of the species but also saves the population of the LB fluid in a separate file. To load a checkpoint the :class:`espressomd.electrokinetics.Electrokinetics` should have the same name as in the script it was saved, but to use the species one need to extract them from the :class:`espressomd.electrokinetics.Electrokinetics` via ``species``.
+
+::
+
+    checkpoint.load(cpt_path)
+    species = ek.get_params()['species']
+    ek.load_checkpoint(path)
 
 .. _Output:
 
@@ -1640,8 +1509,8 @@ visualization software such as ParaView [5]_ and Mayavi2 [6]_.
     species.print_vtk_density(path)
 
 These commands are similar to the above. They enable the
-export of diffusive species properties, namely: `density` and `flux`, which specify the
-number density and flux of species `species`, respectively.
+export of diffusive species properties, namely: ``density`` and ``flux``, which specify the
+number density and flux of species ``species``, respectively.
 
 .. _Local Quantities:
 
@@ -1658,7 +1527,7 @@ A single node can be addressed using three integer values
 which run from 0 to ``dim_x/agrid``, ``dim_y/agrid``, and ``dim_z/agrid``, respectively. The
 velocity, electrostatic potential and the pressure of a LB fluid node can be obtained this way.
 
-The local `density` and `flux` of a species can be obtained in the same fashion:
+The local ``density`` and ``flux`` of a species can be obtained in the same fashion:
 
 ::
 
@@ -1666,7 +1535,7 @@ The local `density` and `flux` of a species can be obtained in the same fashion:
     species[0, 0, 0].flux
 
 .. [5]
-   http://www.paraview.org/
+   https://www.paraview.org/
 .. [6]
    http://code.enthought.com/projects/mayavi/
 
@@ -1711,7 +1580,7 @@ In |es|, the basic ingredients to simulate such a system are split into three bo
 
 The system-wide thermostat has to be applied to the centre of mass and not to
 the core particle directly. Therefore, the particles have to be excluded from
-global thermostating.  With ``LANGEVIN_PER_PARTICLE`` enabled, we set the
+global thermostatting.  With ``LANGEVIN_PER_PARTICLE`` enabled, we set the
 temperature and friction coefficient of the Drude complex to zero, which allows
 to still use a global Langevin thermostat for non-polarizable particles.
 
@@ -1820,19 +1689,19 @@ bonded particles.
     to damp dipole-dipole interactions on short distances. It is available in |es|
     as a non-bonded interaction.
 
+.. _Monte Carlo Methods:
+
+Monte Carlo Methods
+-------------------
+
+.. note:: The whole Reaction Ensemble module uses Monte Carlo moves which require potential energies. Therefore the Reaction Ensemble requires support for energy calculations for all active interactions in the simulation. Please also note that Monte Carlo methods may create and delete particles from the system. This process can invalidate particle ids, in which case the particles are no longer numbered contiguously. Particle slices returned by ``system.part`` are still iterable, but the indices no longer match the particle ids.
+
 .. _Reaction Ensemble:
 
 Reaction Ensemble
------------------
+~~~~~~~~~~~~~~~~~
 
-.. note:: The whole Reaction Ensemble module uses Monte Carlo moves which require potential energies. Therefore the Reaction Ensemble requires support for energy calculations for all interactions which are used in the simulation.
-
-For a description of the available methods see :mod:`espressomd.reaction_ensemble`.
-An Example script can be found here:
-
-* `Reaction ensemble/ constant pH ensemble                    <https://github.com/espressomd/espresso/blob/python/samples/reaction_ensemble.py>`_
-
-The reaction ensemble :cite:`smith94a,turner2008simulation` allows to simulate
+The reaction ensemble :cite:`smith94c,turner2008simulation` allows to simulate
 chemical reactions which can be represented by the general equation:
 
 .. math::
@@ -1897,7 +1766,7 @@ In the *forward* reaction, the appropriate number of reactants (given by
 products is inserted into the system. In the *backward* reaction,
 reactants and products exchange their roles. The acceptance probability
 :math:`P^{\xi}` for move from state :math:`o` to :math:`n` reaction
-ensemble is given by the criterion :cite:`smith94a`
+ensemble is given by the criterion :cite:`smith94c`
 
 .. math::
 
@@ -1918,7 +1787,7 @@ The parameter :math:`\Gamma` proportional to the reaction constant. It is define
 
 where :math:`\left<N_i\right>/V` is the average number density of particles of type :math:`i`.
 Note that the dimension of :math:`\Gamma` is :math:`V^{\bar\nu}`, therefore its
-units must be consistent with the units in which Espresso measures the box volume,
+units must be consistent with the units in which |es| measures the box volume,
 i.e. :math:`\sigma^3`.
 
 It is often convenient, and in some cases even necessary, that some particles
@@ -1932,16 +1801,24 @@ coefficients allow for it.  Corresponding means having the same position (index)
 the python lists of reactants and products which are used to set up the
 reaction.
 
-.. _Converting tabulated reaction constants to internal units in Espresso:
+Multiple reactions can be added to the same instance of the reaction ensemble.
 
-Converting tabulated reaction constants to internal units in Espresso
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+An example script can be found here:
 
-The implementation in Espresso requires that the dimension of :math:`\Gamma`
-is consistent with the internal unit of volume, :math:`\sigma^3`.
-The tabulated values of equilibrium constants for reactions in solution, :math:`K_c`, typically use
+* `Reaction ensemble / constant pH ensemble <https://github.com/espressomd/espresso/blob/python/samples/reaction_ensemble.py>`_
+
+For a description of the available methods, see :class:`espressomd.reaction_ensemble.ReactionEnsemble`.
+
+.. _Converting tabulated reaction constants to internal units in ESPResSo:
+
+Converting tabulated reaction constants to internal units in ESPResSo
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The implementation in |es| requires that the dimension of :math:`\Gamma`
+is consistent with the internal unit of volume, :math:`\sigma^3`. The tabulated
+values of equilibrium constants for reactions in solution, :math:`K_c`, typically use
 :math:`c^{\ominus} = 1\,\mathrm{moldm^{-3}}` as the reference concentration,
-and have the dimension of :math:`(c^{\ominus})^{\bar\nu}`.  To be used with Espresso, the
+and have the dimension of :math:`(c^{\ominus})^{\bar\nu}`. To be used with |es|, the
 value of :math:`K_c` has to be converted as
 
 .. math::
@@ -1958,47 +1835,87 @@ be converted to :math:`K_c` as
    K_p(p^{\ominus}=1\,\mathrm{atm}) = K_c(c^{\ominus} = 1\,\mathrm{moldm^{-3}}) \biggl(\frac{c^{\ominus}RT}{p^{\ominus}}\biggr)^{\bar\nu},
 
 where :math:`p^{\ominus}=1\,\mathrm{atm}` is the standard pressure.
-
+Consider using the python module pint for unit conversion.
 
 .. _Wang-Landau Reaction Ensemble:
 
 Wang-Landau Reaction Ensemble
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. .. note:: Requires support for energy calculations for all used interactions since it uses Monte-Carlo moves which use energies in one way or the other.
-
-An Example script can be found here:
-
-* `Wang Landau reaction ensemble                    <https://github.com/espressomd/espresso/blob/python/samples/wang_landau_reaction_ensemble.py>`_
-
 Combination of the Reaction Ensemble with the Wang-Landau algorithm
-:cite:`wang01a`
-allows for enhanced sampling of the reacting system, and
+:cite:`wang01a`. Allows for enhanced sampling of the reacting system
 and for the determination of the density of states with respect
 to the reaction coordinate or with respect to some other collective
-variable :cite:`landsgesell16a`. Here the 1/t Wang-Landau
+variable :cite:`landsgesell17a`. Here the 1/t Wang-Landau
 algorithm :cite:`belardinelli07a` is implemented since it
-does not suffer from systematic errors. Additionally to the above
-commands for the reaction ensemble use the following commands for the
-Wang-Landau reaction ensemble. For a description of the available methods see :mod:`espressomd.reaction_ensemble`:
+does not suffer from systematic errors.
+
+Multiple reactions and multiple collective variables can be set.
+
+An example script can be found here:
+
+* `Wang-Landau reaction ensemble <https://github.com/espressomd/espresso/blob/python/samples/wang_landau_reaction_ensemble.py>`__
+
+For a description of the available methods, see :class:`espressomd.reaction_ensemble.ReactionEnsemble`.
+
+.. _Grand canonical ensemble simulation using the Reaction Ensemble:
+
+Grand canonical ensemble simulation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As a special case, all stoichiometric coefficients on one side of the chemical
+reaction can be set to zero. Such a reaction creates particles *ex nihilo*, and
+is equivalent to exchanging particles with a reservoir. This type of simulation
+in the reaction ensemble is equivalent to the grand canonical simulation.
+Formally, this can be expressed by the reaction
+
+.. math::
+
+    \mathrm{\emptyset \rightleftharpoons\ \nu_A A  }  \,,
+
+where, if :math:`\nu_A=1`, the reaction constant :math:`\Gamma` defines the chemical potential of species A.
+However, if :math:`\nu_A\neq 1`, the statistics of the reaction ensemble becomes
+equivalent to the grand canonical only in the limit of large average number of species A in the box.
+If the reaction contains more than one product, then the reaction constant
+:math:`\Gamma` defines only the sum of their chemical potentials but not the
+chemical potential of each product alone.
+
+Since the Reaction Ensemble acceptance transition probability can be
+derived from the grand canonical acceptance transition probability, we
+can use the reaction ensemble to implement grand canonical simulation
+moves. This is done by adding reactions that only have reactants (for the
+deletion of particles) or only have products (for the creation of
+particles). There exists a one-to-one mapping of the expressions in the
+grand canonical transition probabilities and the expressions in the
+reaction ensemble transition probabilities.
 
 .. _Constant pH simulation using the Reaction Ensemble:
 
-Constant pH simulation using the Reaction Ensemble
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Constant pH simulation
+~~~~~~~~~~~~~~~~~~~~~~
 
-.. .. note:: Requires support for energy calculations for all used interactions since it uses Monte-Carlo moves which use energies.
+As before in the Reaction Ensemble one can define multiple reactions (e.g. for an ampholytic system which contains an acid and a base) in one :class:`~espressomd.reaction_ensemble.ConstantpHEnsemble` instance:
 
-An Example script can be found here:
+.. code-block:: python
 
-* `Reaction ensemble/ constant pH ensemble                    <https://github.com/espressomd/espresso/blob/python/samples/reaction_ensemble.py>`_
+    cpH=reaction_ensemble.ConstantpHEnsemble(
+        temperature=1, exclusion_radius=1, seed=77)
+    cpH.add_reaction(gamma=K_diss, reactant_types=[0], reactant_coefficients=[1],
+                    product_types=[1, 2], product_coefficients=[1, 1],
+                    default_charges={0: 0, 1: -1, 2: +1})
+    cpH.add_reaction(gamma=1/(10**-14/K_diss), reactant_types=[3], reactant_coefficients=[1], product_types=[0, 2], product_coefficients=[1, 1], default_charges={0:0, 2:1, 3:1} )
+
+
+An example script can be found here:
+
+* `Reaction ensemble / constant pH ensemble <https://github.com/espressomd/espresso/blob/python/samples/reaction_ensemble.py>`_
 
 In the constant pH method due to Reed and Reed
 :cite:`reed92a` it is possible to set the chemical potential
 of :math:`H^{+}` ions, assuming that the simulated system is coupled to an
 infinite reservoir. This value is the used to simulate dissociation
 equilibrium of acids and bases. Under certain conditions, the constant
-pH method can yield equivalent results as the reaction ensemble :cite:`landsgesell16b`. However, it
+pH method can yield equivalent results as the reaction ensemble :cite:`landsgesell17b`. However, it
 treats the chemical potential of :math:`H^{+}` ions and their actual
 number in the simulation box as independent variables, which can lead to
 serious artifacts.
@@ -2012,85 +1929,68 @@ constant :math:`K_c` for the following reaction:
 
    \mathrm{HA \rightleftharpoons\ H^+ + A^- } \,,
 
-For an example of how to setup
-a Constant pH simulation, see the file in the testsuite directory.
-For a description of the available methods see :mod:`espressomd.reaction_ensemble`:
+For a description of the available methods, see :class:`espressomd.reaction_ensemble.ConstantpHEnsemble`.
 
-.. _Grand canonical ensemble simulation using the Reaction Ensemble:
-
-Grand canonical ensemble simulation using the Reaction Ensemble
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-As a special case, all stoichiometric coefficients on one side of the chemical
-reaction can be set to zero.  Such reaction creates particles *ex nihilo*, and
-is equivalent to exchange with a reservoir. Then the simulation in the reaction ensemble becomes equivalent with the
-grandcanonical simulation. Formally, this can be expressed by the reaction
-
-.. math::
-
-    \mathrm{\emptyset \rightleftharpoons\ \nu_A A  }  \,,
-
-where, if :math:`\nu_A=1`, the reaction constant :math:`\Gamma` defines the chemical potential of species A.
-However, if :math:`\nu_A\neq 1`, the statistics of the reaction ensemble becomes
-equivalent to the grandcanonical only in the limit of large average number of species A in the box.
-If the reaction contains more than one product, then the reaction constant
-:math:`\Gamma` defines only the sum of their chemical potentials but not the
-chemical potential of each product alone.
-
-Since the Reaction Ensemble acceptance transition probability can be
-derived from the grand canonical acceptance transition probability we
-can use the reaction ensemble to implement grand canonical simulation
-moves. This is done via adding reactions that only have reactants (for the
-deletion of particles) or only have products (for the creation of
-particles). There exists a one to one mapping of the expressions in the
-grand canonical transition probabilities and the expressions in the
-reaction ensemble transition probabilities.
-
-.. The text below is commented-out because it is still an open research question how it should be used correctly.
-..
-.. This can be used to include water autoprotolysis in the implicit solvent simulation,
-.. by means of a reaction:
-..
-.. .. math::
-..
-..    \mathrm{2 H_2O \rightleftharpoons\ H_3O^+ + OH^- } \,,
-..
-..
-.. add the following ex nihilo reactions to Espresso. (:math:`\emptyset`, read ex
-.. nihilo). Ex nihilo means that the reaction has no reactants or products.
-.. Therefore, if :math:`\emptyset` is a product, particles vanish and if
-.. :math:`\emptyset` is an reactant, then particles are created ex nihilo:
-..
-.. .. math::
-..
-..    \mathrm{\emptyset \rightleftharpoons\ H_3O^+ + OH^- }  \,,
-..
-.. with reaction constant K
-..
-.. .. math::
-..
-..    \mathrm{H_3O^+ + OH^- \rightleftharpoons\ \emptyset} \,,
-..
-.. with reaction constant 1/K. K is given implicitly as a function of the apparent dissociation
-.. constant :math:`K_w=10^{-14} \rm{mol^2/l^2}=x\cdot \rm{1/(\sigma^3)^2}` such that the dimensionless is
-.. :math:`K=(x\cdot \rm{1/(\sigma^3)^2})/(\beta P^0)^{\overline{\nu}}` with
-.. :math:`\overline{\nu}=2` for the dissociation reaction and where x is
-.. the value of the apparent dissociation constant that is converted from
-.. :math:`\rm{mol^2/l^2}` to a number density in :math:`1/(\sigma^3)^2`,
-.. where :math:`\sigma` is the simulation length unit. If :math:`\beta` and
-.. :math:`P^0` are provided in simulation units this will make :math:`K`
-.. dimensionless. As a test for the autodissociation of water a big
-.. simulation box can be set up and the autodissociation reaction can be
-.. performed. Then the box should fill with the correct number of protons
-.. and hydroxide ions (check for the number of protons and hydroxide ions
-.. in the given simulation volume and compare this to the expected value at
-.. pH 7). Further the :math:`pK_w=14` should be reproduced -also in the
-.. case of an initial excess of acid or base in the simulation box. Note
-.. that this only works for big enough volumes.
 
 Widom Insertion (for homogeneous systems)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-An example script can be found here:
+The Widom insertion method measures the change in excess free energy, i.e. the excess chemical potential due to the insertion of a new particle, or a group of particles:
 
-* `Widom Insertion                    <https://github.com/espressomd/espresso/blob/python/samples/widom_insertion.py>`_
+.. math::
+
+   \mu^\mathrm{ex}_B & :=\Delta F^\mathrm{ex} =F^\mathrm{ex}(N_B+1,V,T)-F^\mathrm{ex}(N_B,V,T)\\
+   &=-kT \ln \left(\frac{1}{V} \int_V d^3r_{N_B+1} \langle \exp(-\beta \Delta E_\mathrm{pot}) \rangle_{N_B} \right)
+
+For this one has to provide the following reaction to the Widom method:
+
+.. code-block:: python
+
+    type_B=1
+    widom = reaction_ensemble.WidomInsertion(
+        temperature=temperature, seed=77)
+    widom.add_reaction(reactant_types=[],
+    reactant_coefficients=[], product_types=[type_B],
+    product_coefficients=[1], default_charges={1: 0})
+    widom.measure_excess_chemical_potential(0)
+
+
+The call of ``add_reaction`` define the insertion :math:`\mathrm{\emptyset \to type_B}` (which is the 0th defined reaction).
+Multiple reactions for the insertions of different types can be added to the same ``WidomInsertion`` instance.
+Measuring the excess chemical potential using the insertion method is done via calling ``widom.measure_excess_chemical_potential(0)``.
+If another particle insertion is defined, then the excess chemical potential for this insertion can be measured by calling ``widom.measure_excess_chemical_potential(1)``.
+Be aware that the implemented method only works for the canonical ensemble. If the numbers of particles fluctuate (i.e. in a semi grand canonical simulation) one has to adapt the formulas from which the excess chemical potential is calculated! This is not implemented. Also in a isobaric-isothermal simulation (NPT) the corresponding formulas for the excess chemical potentials need to be adapted. This is not implemented.
+
+The implementation can also deal with the simultaneous insertion of multiple particles and can therefore measure the change of excess free energy of multiple particles like e.g.:
+
+.. math::
+
+   \mu^\mathrm{ex, pair}&:=\Delta F^\mathrm{ex, pair}:= F^\mathrm{ex}(N_1+1, N_2+1,V,T)-F^\mathrm{ex}(N_1, N_2 ,V,T)\\
+   &=-kT \ln \left(\frac{1}{V^2} \int_V \int_V d^3r_{N_1+1} d^3 r_{N_2+1} \langle \exp(-\beta \Delta E_\mathrm{pot}) \rangle_{N_1, N_2} \right)
+
+Note that the measurement involves three averages: the canonical ensemble average :math:`\langle \cdot \rangle_{N_1, N_2}` and the two averages over the position of particles :math:`N_1+1` and :math:`N_2+1`.
+Since the averages over the position of the inserted particles are obtained via brute force sampling of the insertion positions it can be beneficial to have multiple insertion tries on the same configuration of the other particles.
+
+One can measure the change in excess free energy due to the simultaneous insertions of particles of type 1 and 2 and the simultaneous removal of a particle of type 3:
+
+.. math::
+
+   \mu^\mathrm{ex}:=\Delta F^\mathrm{ex, }:= F^\mathrm{ex}(N_1+1, N_2+1, N_3-1,V,T)-F^\mathrm{ex}(N_1, N_2, N_3 ,V,T)
+
+For this one has to provide the following reaction to the Widom method:
+
+.. code-block:: python
+
+    widom.add_reaction(reactant_types=[type_3],
+    reactant_coefficients=[1], product_types=[type_1, type_2],
+    product_coefficients=[1,1], default_charges={1: 0})
+    widom.measure_excess_chemical_potential(0)
+
+Be aware that in the current implementation, for MC moves which add and remove particles, the insertion of the new particle always takes place at the position where the last particle was removed. Be sure that this is the behaviour you want to have. Otherwise implement a new function ``WidomInsertion::make_reaction_attempt`` in the core.
+
+An example script which demonstrates the usage for measuring the pair excess chemical potential for inserting an ion pair into a salt solution can be found here:
+
+* `Widom Insertion <https://github.com/espressomd/espresso/blob/python/samples/widom_insertion.py>`_
+
+For a description of the available methods, see :class:`espressomd.reaction_ensemble.WidomInsertion`.
+

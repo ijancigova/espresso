@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013-2018 The ESPResSo project
+# Copyright (C) 2013-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -19,6 +19,7 @@
 include "myconfig.pxi"
 from libcpp cimport bool
 from interactions cimport ImmersedBoundaries
+from utils cimport Vector3i
 
 cdef extern from "global.hpp":
     int FIELD_BOXL
@@ -35,6 +36,7 @@ cdef extern from "global.hpp":
     int FIELD_THERMO_VIRTUAL
     int FIELD_TEMPERATURE
     int FIELD_LANGEVIN_GAMMA
+    int FIELD_SWIMMING_PARTICLES_EXIST
     IF ROTATION:
         int FIELD_LANGEVIN_GAMMA_ROTATION
     IF NPT:
@@ -46,7 +48,7 @@ cdef extern from "global.hpp":
 
 cdef extern from "communication.hpp":
     extern int n_nodes
-    void mpi_set_time_step(double time_step)
+    void mpi_set_time_step(double time_step) except +
 
 cdef extern from "integrate.hpp":
     double time_step
@@ -54,35 +56,34 @@ cdef extern from "integrate.hpp":
     extern double sim_time
     extern double verlet_reuse
     extern double skin
-
-cdef extern from "lattice.hpp":
-    extern int lattice_switch
+    extern bool set_py_interrupt
 
 cdef extern from "domain_decomposition.hpp":
     ctypedef struct  DomainDecomposition:
         int cell_grid[3]
         double cell_size[3]
+        bool fully_connected[3]
 
     extern DomainDecomposition dd
     extern int max_num_cells
     extern int min_num_cells
-    extern double max_skin
-    int calc_processor_min_num_cells()
+    int calc_processor_min_num_cells(const Vector3i & grid)
 
 
 cdef extern from "particle_data.hpp":
     extern int n_part
+    extern bool swimming_particles_exist
 
-cdef extern from "interaction_data.hpp":
+cdef extern from "nonbonded_interactions/nonbonded_interaction_data.hpp":
     double dpd_gamma
     double dpd_r_cut
     extern double max_cut
     extern int max_seen_particle
     extern int max_seen_particle_type
     extern double max_cut_nonbonded
-    extern double max_cut_bonded
     extern double min_global_cut
-
+    double recalc_maximal_cutoff_bonded()
+    double recalc_maximal_cutoff_nonbonded()
 
 cdef extern from "thermostat.hpp":
     extern double nptiso_gamma0
@@ -97,20 +98,7 @@ cdef extern from "dpd.hpp":
     extern int dpd_twf
 
 
-IF LB:
-    cdef extern from "lb.hpp":
-        ctypedef struct LB_Parameters:
-            double tau
-        extern LB_Parameters lbpar
-
-IF LB_GPU:
-    cdef extern from "lbgpu.hpp":
-        ctypedef struct LB_parameters_gpu:
-            double tau
-        extern LB_parameters_gpu lbpar_gpu
-
 cdef extern from "cells.hpp":
-    extern double max_range
     ctypedef struct CellStructure:
         int type
         bool use_verlet_list
@@ -128,37 +116,16 @@ cdef extern from "tuning.hpp":
     extern int timing_samples
 
 
-cdef extern from "grid.hpp":
-    double box_l[3]
-    double local_box_l[3]
-    extern int node_grid[3]
-    extern int periodic
-    extern double min_box_l
-
 cdef extern from "npt.hpp":
     ctypedef struct nptiso_struct:
         double p_ext
         double p_inst
-        double p_inst_av
         double p_diff
         double piston
     extern nptiso_struct nptiso
 
 cdef extern from "statistics.hpp":
     extern int n_configs
-
-cdef extern from "swimmer_reaction.hpp":
-    ctypedef struct  reaction_struct:
-        int reactant_type
-        int product_type
-        int catalyzer_type
-        double range
-        double ct_rate
-        double eq_rate
-        int sing_mult
-        int swap
-
-    cdef extern reaction_struct reaction
 
 cdef extern from "immersed_boundaries.hpp":
     extern ImmersedBoundaries immersed_boundaries

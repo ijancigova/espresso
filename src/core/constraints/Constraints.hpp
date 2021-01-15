@@ -1,21 +1,21 @@
 /*
-Copyright (C) 2010-2018 The ESPResSo project
-
-This file is part of ESPResSo.
-
-ESPResSo is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-ESPResSo is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #ifndef CORE_CONSTRAINTS_CONSTRAINTS_HPP
 #define CORE_CONSTRAINTS_CONSTRAINTS_HPP
 
@@ -36,7 +36,7 @@ public:
   using const_iterator = typename container_type::const_iterator;
 
 private:
-  void reset_foces() const {
+  void reset_forces() const {
     for (auto const &c : *this) {
       c->reset_force();
     }
@@ -46,7 +46,7 @@ private:
 
 public:
   void add(std::shared_ptr<Constraint> const &c) {
-    if (not c->fits_in_box(Vector3d{box_l})) {
+    if (not c->fits_in_box(box_geo.length())) {
       throw std::runtime_error("Constraint not compatible with box size.");
     }
 
@@ -65,26 +65,30 @@ public:
   const_iterator begin() const { return m_constraints.begin(); }
   const_iterator end() const { return m_constraints.end(); }
 
-  void add_forces(ParticleRange &particles) const {
-    reset_foces();
+  void add_forces(ParticleRange &particles, double t) const {
+    if (m_constraints.empty())
+      return;
+
+    reset_forces();
 
     for (auto &p : particles) {
-      auto const pos = folded_position(p);
+      auto const pos = folded_position(p.r.p, box_geo);
       ParticleForce force{};
       for (auto const &c : *this) {
-        force += c->force(p, pos);
+        force += c->force(p, pos, t);
       }
 
       p.f += force;
     }
   }
 
-  void add_energy(ParticleRange &particles, Observable_stat &energy) const {
+  void add_energy(const ParticleRange &particles, double t,
+                  Observable_stat &energy) const {
     for (auto &p : particles) {
-      auto const pos = folded_position(p);
+      auto const pos = folded_position(p.r.p, box_geo);
 
       for (auto const &c : *this) {
-        c->add_energy(p, pos, energy);
+        c->add_energy(p, pos, t, energy);
       }
     }
   }

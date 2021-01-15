@@ -1,21 +1,21 @@
 /*
-Copyright (C) 2010-2018 The ESPResSo project
-
-This file is part of ESPResSo.
-
-ESPResSo is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-ESPResSo is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #ifndef CORE_PARTICLE_ITERATOR_HPP
 #define CORE_PARTICLE_ITERATOR_HPP
 
@@ -35,8 +35,12 @@ struct ParticleIterator : public boost::iterator_facade<
     }
   }
 
-public:
-  friend typename std::iterator_traits<ParticleIterator>::difference_type
+private:
+  using base_type = typename boost::iterator_facade<
+      ParticleIterator<BidirectionalIterator, Particle>, Particle,
+      boost::forward_traversal_tag>;
+
+  friend typename base_type::difference_type
   distance(ParticleIterator const &begin, ParticleIterator const &end) {
     if (begin == end)
       return 0;
@@ -58,7 +62,6 @@ public:
     return dist;
   }
 
-private:
   friend class boost::iterator_core_access;
 
   void increment() {
@@ -74,7 +77,6 @@ private:
     } else {
       m_part_id = 0;
 
-      /* Don't run over the end */
       if (m_cell != m_end)
         ++m_cell;
 

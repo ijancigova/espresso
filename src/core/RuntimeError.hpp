@@ -1,21 +1,21 @@
 /*
-  Copyright (C) 2014-2018 The ESPResSo project
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2014-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef ERROR_HANDLING_RUNTIME_ERROR_HPP
 #define ERROR_HANDLING_RUNTIME_ERROR_HPP
@@ -23,11 +23,12 @@
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/string.hpp>
 #include <string>
+#include <utility>
 
 namespace ErrorHandling {
 
 /** \brief A runtime error.
- * This class describes an runtime error,
+ * This class describes a runtime error,
  * including where it occurred and its
  * severity.
  */
@@ -37,10 +38,11 @@ struct RuntimeError {
    */
   enum class ErrorLevel { DEBUG, INFO, WARNING, ERROR };
   RuntimeError() = default;
-  RuntimeError(ErrorLevel level, int who, const std::string &what,
-               const std::string &function, const std::string &file, int line)
-      : m_level(level), m_who(who), m_what(what), m_function(function),
-        m_file(file), m_line(line) {}
+  RuntimeError(ErrorLevel level, int who, std::string what,
+               std::string function, std::string file, int line)
+      : m_level(level), m_who(who), m_what(std::move(what)),
+        m_function(std::move(function)), m_file(std::move(file)), m_line(line) {
+  }
 
   /** The error level */
   ErrorLevel level() const { return m_level; }

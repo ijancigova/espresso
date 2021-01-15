@@ -1,7 +1,22 @@
+# Copyright (C) 2010-2019 The ESPResSo project
+#
+# This file is part of ESPResSo.
+#
+# ESPResSo is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# ESPResSo is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Code shared by charge and dipole methods based on the SCAFACOS library."""
 
 
-from __future__ import print_function, absolute_import
 from espressomd.actors cimport Actor
 from libcpp.string cimport string  # import std::string
 cimport electrostatics
@@ -72,7 +87,7 @@ IF SCAFACOS == 1:
                 if len(pvalues) == 1:
                     pvalues = pvalues[0]
                 else:
-                    # Cast array elements to strings and join them by commata
+                    # Cast array elements to strings and join them by commas
                     # to achieve consistency with setting array-likes
                     # such as "pnfft_n":"128,128,128"
                     for j in range(len(pvalues)):
@@ -85,7 +100,7 @@ IF SCAFACOS == 1:
             # Re-add the prefactor to the parameter set
             if self.dipolar:
                 IF DIPOLES == 1:
-                    res["prefactor"] = magnetostatics.coulomb.Dprefactor
+                    res["prefactor"] = magnetostatics.dipole.prefactor
                 pass
             else:
                 IF ELECTROSTATICS == 1:
@@ -102,7 +117,7 @@ IF SCAFACOS == 1:
                         "Scafacos cannot be used for dipoles and charges at the same time")
 
             IF DIPOLES == 1:
-                if not self.dipolar and < int > magnetostatics.coulomb.Dmethod == <int > magnetostatics.DIPOLAR_SCAFACOS:
+                if not self.dipolar and < int > magnetostatics.dipole.method == <int > magnetostatics.DIPOLAR_SCAFACOS:
                     raise Exception(
                         "Scafacos cannot be used for dipoles and charges at the same time")
 

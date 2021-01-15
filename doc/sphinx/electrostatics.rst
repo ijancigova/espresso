@@ -15,8 +15,10 @@ where
    C=\frac{1}{4\pi \epsilon_0 \epsilon_r}
    :label: coulomb_prefactor
 
-is a prefactor which can be set by the user.
-The commonly used Bdrm length :math:`l_B = e_o^2 / (4 \pi \epsilon_0 \epsilon_r k_B T)` is the length at which the Coulomb energy between two unit charges is equal to the thermal energy :math:`k_B T`.
+is a prefactor which can be set by the user. The commonly used Bjerrum length
+:math:`l_B = e_o^2 / (4 \pi \epsilon_0 \epsilon_r k_B T)` is the length at
+which the Coulomb energy between two unit charges is equal to the thermal
+energy :math:`k_B T`.
 Based on the this length, the prefactor is given by :math:`C=l_B k_B T`.
 
 Computing electrostatic interactions is computationally very expensive.
@@ -64,8 +66,8 @@ installed on your system. In |es|, you can check if it is compiled in by
 checking for the feature ``FFTW`` with ``espressomd.features``.
 P3M requires full periodicity (1 1 1). Make sure that you know the relevance of the
 P3M parameters before using P3M! If you are not sure, read the following
-references
-:cite:`ewald21,hockney88,kolafa92,deserno98,deserno98a,deserno00,deserno00a,cerda08a`.
+references:
+:cite:`ewald21,hockney88,kolafa92,deserno98a,deserno98b,deserno00,deserno00a,cerda08d`.
 
 .. _Tuning Coulomb P3M:
 
@@ -79,11 +81,12 @@ This can be useful to speed up the tuning during testing or if the parameters
 are already known.
 
 To prevent the automatic tuning, set the ``tune`` parameter to ``False``.
-To manually tune or retune P3M, call :meth:`espresso.electrostatics.P3M.Tune`.
+To manually tune or retune P3M, call :meth:`espressomd.electrostatics.P3M.tune
+<espressomd.electrostatics.ElectrostaticInteraction.tune>`.
 Note, however, that this is a method the P3M object inherited from
 :attr:`espressomd.electrostatics.ElectrostaticInteraction`.
 All parameters passed to the method are fixed in the tuning routine. If not
-specified in the ``Tune()`` method, the parameters ``prefactor`` and
+specified in the ``tune()`` method, the parameters ``prefactor`` and
 ``accuracy`` are reused.
 
 It is not easy to calculate the various parameters of the P3M method
@@ -125,7 +128,8 @@ It uses the same parameters and interface functionality as the CPU version of
 the solver. It should be noted that this does not always provide significant
 increase in performance. Furthermore it computes the far field interactions
 with only single precision which limits the maximum precision. The algorithm
-does not work in combination with the electrostatic extensions :ref:`Dielectric interfaces with the ICC algorithm`
+does not work in combination with the electrostatic extensions
+:ref:`Dielectric interfaces with the ICC* algorithm <Dielectric interfaces with the ICC algorithm>`
 and :ref:`Electrostatic Layer Correction (ELC)`.
 
 .. _Debye-Hückel potential:
@@ -250,205 +254,8 @@ With each iteration, ICC has to solve electrostatics which can severely slow
 down the integration. The performance can be improved by using multiple cores,
 a minimal set of ICC particles and convergence and relaxation parameters that
 result in a minimal number of iterations. Also please make sure to read the
-corresponding articles, mainly :cite:`espresso2,tyagi10a,kesselheim11a` before
+corresponding articles, mainly :cite:`arnold13a,tyagi10a,kesselheim11a` before
 using it.
-
-..
-    .. _Maxwell Equation Molecular Dynamics (MEMD):
-
-    Maxwell Equation Molecular Dynamics (MEMD)
-    ------------------------------------------
-
-    .. todo:: NOT IMPLEMENTED IN PYTHON
-
-    inter coulomb memd
-
-    This is an implementation of the instantaneous 1/r Coulomb interaction
-
-    .. math:: U = l_B k_B T \frac{q_1 q_2}{r}
-
-    as the potential of mean force between charges which are dynamically
-    coupled to a local electromagnetic field.
-
-    The algorithm currently works with the following constraints:
-
-    -  cellsystem has to be domain decomposition but *without* Verlet lists!
-
-    -  system has to be periodic in three dimensions.
-
-    is the mass of the field degree of freedom and equals to the square root
-    of the inverted speed of light.
-
-    is the number of mesh points for the interpolation of the
-    electromagnetic field in one dimension.
-
-    is the background dielectric permittivity at infinity. This defaults to
-    metallic boundary conditions, to match the results of P3M.
-
-    The arising self-interactions are treated with a modified version of the
-    exact solution of the lattice Green's function for the problem.
-
-    Currently, forces have large errors for two particles within the same
-    lattice cube. This may be fixed in future development, but right now
-    leads to the following rule of thumb for the parameter choices:
-
-    -  The lattice should be of the size of your particle size (i.e. the
-       Lennard-Jones epsilon). That means:
-       :math:`\text{mesh} \approx \text{box_l} / \text{lj_sigma}`
-
-    -  The integration timestep should be in a range where no particle moves
-       more than one lattice box (i.e. Lennard-Jones sigma) per timestep.
-
-    -  The speed of light should satisfy the stability criterion
-       :math:`c\ll a/dt`, where :math:`a` is the lattice spacing and
-       :math:`dt` is the timestep. For the second parameter, this means
-       :math:`\text{f_mass} \gg dt^2/a^2`.
-
-    The main error of the MEMD algorithm stems from the lattice
-    interpolation and is proportional to the lattice size in three
-    dimensions, which means :math:`\Delta_\text{lattice} \propto a^3`.
-
-    Without derivation here, the algorithms error is proportional to
-    :math:`1/c^2`, where :math:`c` is the adjustable speed of light. From
-    the stability criterion, this yields
-
-    .. math::
-
-       \Delta_\text{maggs} = A\cdot a^3 + B\cdot dt^2/a^2
-       %\label{eq:maggserror}
-
-    This means that increasing the lattice will help the algorithmic error,
-    as we can tune the speed of light to a higher value. At the same time,
-    it increases the interpolation error at an even higher rate. Therefore,
-    momentarily it is advisable to choose the lattice with a rather fine
-    mesh of the size of the particles. As a rule of thumb, the error will
-    then be less than :math:`10^{-5}` for the particle force.
-
-    For a more detailed description of the algorithm, see appendix  or the
-    publications :cite:`maggs02a,pasichnyk04a`.
-
-    .. _Spatially varying dielectrics with MEMD:
-
-    Spatially varying dielectrics with MEMD
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    [sec:dielectric-memd]
-
-    Since MEMD is a purely local algorithm, one can apply local changes to
-    some properties and the propagation of the Coulomb force is still valid.
-    In particular, it is possible to arbitrarily select the dielectric
-    permittivity on each site of the interpolating lattice.
-
-    inter coulomb memd localeps node dir eps
-
-    The keyword after the command offers the possibility to assign any value
-    of :math:`\varepsilon` to any lattice site.
-
-    is the Bjerrum length of the background. It defines the reference value
-    :math:`\varepsilon_\text{bg}` via the formula . This is a global
-    variable.
-
-    is the index of the node in :math:`x` direction that should be changed
-
-    is the index of the node in :math:`y` direction that should be changed
-
-    is the index of the node in :math:`z` direction that should be changed
-
-    is the direction in which the lattice site to be changed is pointing.
-    Has to be one of the three (X, Y or Z).
-
-    is the relative permittivity change in respect to the background
-    permittivity set by the parameter .
-
-    The permittivity on each lattice site is set relatively. By defining the
-    (global) Bjerrum length of the system, the reference
-    permittivity \ :math:`\varepsilon` is fixed via the formula
-
-    .. math::
-
-       l_B = e^2 / (4 \pi \varepsilon k_B T)
-       \label{eq:bjerrum-length}
-
-    The local changes of :math:`\varepsilon` are in reference to this value
-    and can be seen as a spatially-dependent prefactor to this epsilon. If
-    left unchanged, this prefactor is :math:`1.0` for every site by default.
-
-    .. _Adaptive permittivity with MEMD:
-
-    Adaptive permittivity with MEMD
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    In addition to setting the local permittivity manually as described in
-    section [sec:dielectric-memd], MEMD is capable of adapting the local
-    permittivity at each lattice site, dependent on the concentration of
-    surrounding charges. More information on this can be found in
-    article :cite:`fahrenberger15b`, which you should cite if
-    you use this algorithm.
-
-    To achieve this, the local salt concentration around each lattice cell
-    is measured and then mapped to an according dielectric permittivity
-    using the empirical formula
-
-    .. math::
-
-       \varepsilon = \frac{78.5}{1+0.278\cdot C},
-           \label{eq:salt-map}
-
-    where :math:`C` is the concentration in molar [M], or moles per liter
-    [mol/l]. The algorithm averages over a volume of :math:`7^3` lattice
-    cubes and expects a concentration in molar within the simulation. In
-    more MD-friendly units, this would mean that the units expected by the
-    formula correspond to a lattice size of roughly :math:`0.6` nanometers
-    for MEMD. Any other length unit is possible but needs to be scaled by a
-    prefactor. This is perfectly reasonable and will not break the
-    algorithm, since the permittivity :math:`\varepsilon` is dimensionless.
-    The scaling factor :math:`S_\text{adaptive}` is thus defined via the
-    used MEMD lattice spacing :math:`a_\text{used}`:
-
-    .. math::
-
-       S_\text{adaptive} \times a_\text{used} = 0.6\,\text{nm}
-           \label{eq:adaptive-scaling}
-
-    To use MEMD with adaptive permittivity to calculate Coulomb interactions
-    in the system, use the following command.
-
-    inter coulomb memd adaptive parameters
-
-    The keyword after the command will use the implementation with
-    dielectric permittivity dependent on the local salt concentration.
-
-    is the Bjerrum length of the background. It defines the reference value
-    :math:`\varepsilon_\text{bg}` via the formula . Since the permittivity
-    in this case is set adaptively, it essentially determined the
-    temperature for the Coulomb interaction. This is a global variable and
-    for this particular algorithm should most likely be set as the
-    permittivity of pure water.
-
-    is the scaling of the used length unit to match the expected unit
-    system. For more details see equation [eq:adaptive-scaling] and the
-    paragraph before.
-
-    is the mass of the field degree of freedom and equals to the square root
-    of the inverted speed of light.
-
-    is the number of mesh points for the interpolation of the
-    electromagnetic field in one dimension.
-
-    It should be mentioned that this algorithm is not a black box and should
-    be understood to a degree if used. Small changes in the parameters,
-    especially the mesh size, can quickly lead to unphysical results. This
-    is not only because of the retarded electrodynamics solution offered by
-    the MEMD algorithm in general, but because of the sensitivity of the
-    dielectric response to the volume over which the local salt
-    concentration is sampled. If this volume is set too small, harsh changes
-    in the local dielectric properties can occur and the algorithm may
-    become unstable, or worse, produce incorrect electrostatic forces.
-
-    The calculation of local permittivity will for the same parameters --
-    depending on your computer -- run roughly a factor of :math:`2` to
-    :math:`4` longer than MEMD without temporally varying dielectric
-    properties.
 
 .. _MMM2D:
 
@@ -456,11 +263,11 @@ MMM2D
 -----
 
 .. note::
-    Required features: ``ELECTROSTATICS``, ``PARTIAL_PERIODIC``.
+    Required features: ``ELECTROSTATICS``.
 
 MMM2D is an electrostatics solver for explicit 2D periodic systems.
 It can account for different dielectric jumps on both sides of the
-non-periodic direction. MMM2D Coulomb method needs periodicity 1 1 0 and the
+non-periodic direction. MMM2D Coulomb method needs periodicity (1 1 0) and the
 layered cell system. The performance of the method depends on the number of
 slices of the cell system, which has to be tuned manually. It is
 automatically ensured that the maximal pairwise error is smaller than
@@ -527,10 +334,10 @@ method in computational order N. Currently, it only supports P3M. This means,
 that you will first have to set up the P3M algorithm before using ELC. The
 algorithm is definitely faster than MMM2D for larger numbers of particles
 (:math:`>400` at reasonable accuracy requirements). The periodicity has to be
-set to ``1 1 1`` still, *ELC* cancels the electrostatic contribution of the
+set to (1 1 1) still, *ELC* cancels the electrostatic contribution of the
 periodic replica in **z-direction**. Make sure that you read the papers on ELC
-(:cite:`arnold02c,icelc`) before using it. ELC is an |es| actor and is used
-with::
+(:cite:`arnold02c,arnold02d,tyagi08a`) before using it. ELC is an |es| actor
+and is used with::
 
     elc = electrostatic_extensions.ELC(gap_size=box_l * 0.2, maxPWerror=1e-3)
     system.actors.add(elc)
@@ -553,7 +360,7 @@ Parameters are:
     * ``delta_mid_top``/``delta_mid_bot``:
         *ELC* can also be used to simulate 2D periodic systems with image charges,
         specified by dielectric contrasts on the non-periodic boundaries
-        (:cite:`icelc`).  Similar to *MMM2D*, these can be set with the
+        (:cite:`tyagi08a`).  Similar to *MMM2D*, these can be set with the
         keywords ``delta_mid_bot`` and ``delta_mid_top``, setting the dielectric
         jump from the simulation region (*middle*) to *bottom* (at ``z<0``) and
         from *middle* to *top* (``z > box_l[2] - gap_size``). The fully metallic case
@@ -561,15 +368,15 @@ Parameters are:
         forces/energies in *ELC* and is therefore only possible with the
         ``const_pot`` option.
     * ``const_pot``:
-        As described, setting this to ``1`` leads to fully metallic boundaries and
+        As described, setting this to ``True`` leads to fully metallic boundaries and
         behaves just like the mmm2d parameter of the same name: It maintains a
         constant potential ``pot_diff`` by countering the total dipole moment of
         the system and adding a homogeneous electric field according to
         ``pot_diff``.
     * ``pot_diff``:
-        Used in conjunction with ``const_pot`` set to 1, this sets the potential difference
-        between the boundaries in the z-direction between ``z=0`` and
-        ``z = box_l[2] - gap_size``.
+        Used in conjunction with ``const_pot`` set to ``True``, this sets the
+        potential difference between the boundaries in the z-direction between
+        ``z=0`` and ``z = box_l[2] - gap_size``.
     * ``far_cut``:
         The setting of the far cutoff is only intended for testing and allows to
         directly set the cutoff. In this case, the maximal pairwise error is
@@ -597,7 +404,7 @@ MMM1D
 -----
 
 .. note::
-    Required features: ``ELECTROSTATICS``, ``PARTIAL_PERIODIC`` for MMM1D, the GPU version additionally needs
+    Required features: ``ELECTROSTATICS`` for MMM1D, the GPU version additionally needs
     the features ``CUDA`` and ``MMM1D_GPU``.
 
 ::
@@ -618,7 +425,7 @@ parameters.
     mmm1d = MMM1D(prefactor=C, maxPWerror=err)
 
 where the prefactor :math:`C` is defined in Eqn. :eq:`coulomb_prefactor`.
-MMM1D Coulomb method for systems with periodicity 0 0 1. Needs the
+MMM1D Coulomb method for systems with periodicity (0 0 1). Needs the
 nsquared cell system (see section :ref:`Cellsystems`). The first form sets parameters
 manually. The switch radius determines at which xy-distance the force
 calculation switches from the near to the far formula. The Bessel cutoff
@@ -648,33 +455,33 @@ one.
 For details on the MMM family of algorithms, refer to appendix :ref:`The MMM family of algorithms`.
 
 
-.. _Scafacos Electrostatics:
+.. _ScaFaCoS Electrostatics:
 
-Scafacos Electrostatics
+ScaFaCoS Electrostatics
 -----------------------
 
-Espresso can use the electrostatics methods from the SCAFACOS *Scalable
-fast Coulomb solvers* library. The specific methods available depend on the compile-time options of the library, and can be queried using :attr:`espressomd.scafacos.available_methods`
+|es| can use the electrostatics methods from the ScaFaCoS *Scalable
+fast Coulomb solvers* library. The specific methods available depend on the compile-time options of the library, and can be queried using :meth:`espressomd.scafacos.available_methods`
 
-To use SCAFACOS, create an instance of :attr:`espressomd.electrostatics.Scafacos` and add it to the list of active actors. Three parameters have to be specified:
+To use ScaFaCoS, create an instance of :class:`espressomd.electrostatics.Scafacos` and add it to the list of active actors. Three parameters have to be specified:
 
-* ``method_name``: name of the SCAFACOS method being used.
+* ``method_name``: name of the ScaFaCoS method being used.
 * ``method_params``: dictionary containing the method-specific parameters
 * ``prefactor``: Coulomb prefactor as defined in :eq:`coulomb_prefactor`.
 
-The method-specific parameters are described in the SCAFACOS manual.
-Additionally, methods supporting tuning have the parameter ``tolerance_field`` which sets the desired root mean square accuracy for the electric field
+The method-specific parameters are described in the ScaFaCoS manual.
+In addition, methods supporting tuning have a parameter ``tolerance_field`` which sets the desired root mean square accuracy for the electric field.
 
-To use the, e.g.,  ``ewald`` solver from SCAFACOS as electrostatics solver for your system, set its
+To use the, e.g., ``ewald`` solver from ScaFaCoS as electrostatics solver for your system, set its
 cutoff to :math:`1.5` and tune the other parameters for an accuracy of
 :math:`10^{-3}`, use::
 
-  from espressomd.electrostatics import Scafacos
-  scafacos = Scafacos(prefactor=1, method_name="ewald",
-                      method_params={"ewald_r_cut": 1.5, "tolerance_field": 1e-3})
-  system.actors.add(scafacos)
+   from espressomd.electrostatics import Scafacos
+   scafacos = Scafacos(prefactor=1, method_name="ewald",
+                       method_params={"ewald_r_cut": 1.5, "tolerance_field": 1e-3})
+   system.actors.add(scafacos)
 
 
 For details of the various methods and their parameters please refer to
-the SCAFACOS manual. To use this feature, SCAFACOS has to be built as a shared library. SCAFACOS can be used only once, either for Coulomb or for dipolar interactions.
+the ScaFaCoS manual. To use this feature, ScaFaCoS has to be built as a shared library. ScaFaCoS can be used only once, either for Coulomb or for dipolar interactions.
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2018 The ESPResSo project
+# Copyright (C) 2010-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -14,12 +14,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-# -*- Mode: python; tab-width: 4; indent-tabs-mode:nil; coding: utf-8 -*-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 """
-    This example shows how to integrate MDAnalysis in ESPResSo
+Show how to expose configuration to ``MDAnalysis`` at run time. The
+functions of ``MDAnalysis`` can be used to perform some analysis or
+convert the frame to other formats (CHARMM, GROMACS, ...). For more
+details, see :ref:`Writing various formats using MDAnalysis`.
 """
-from __future__ import print_function
 import espressomd
 from espressomd import MDA_ESP
 import numpy as np
@@ -36,10 +36,8 @@ system.time_step = 0.001
 system.cell_system.skin = 0.1
 
 for i in range(10):
-    system.part.add(id=i,
-                    pos=np.random.random(3) * system.box_l,
-                    v=np.random.random(3)
-                    )
+    system.part.add(id=i, pos=np.random.random(3) * system.box_l,
+                    v=np.random.random(3))
 for i in range(5, 10):
     system.part[i].q = 1.0
     system.part[i].type = 1
@@ -122,5 +120,3 @@ for i in range(100):
     W.write_next_timestep(u.trajectory.ts)
 
 print("===> The trajectory has been saved in the traj.trr file")
-
-#

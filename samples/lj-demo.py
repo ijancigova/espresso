@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013-2018 The ESPResSo project
+# Copyright (C) 2013-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -16,25 +16,34 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from __future__ import print_function, division
+"""
+Simulate a Lennard-Jones fluid in different thermodynamic ensembles (NVT, NpT).
+Sliders from a MIDI controller can change system variables such as temperature
+and volume. Some thermodynamic observables are analyzed and plotted live.
+"""
 import matplotlib
 matplotlib.use('WXAgg')
 import espressomd
-from espressomd import thermostat
+espressomd.assert_features(["LENNARD_JONES"])
 from espressomd import visualization
 import numpy as np
 from matplotlib import pyplot
 from threading import Thread
-from traits.api import HasTraits, Button, Any, Range, List, Enum, Float
-from traitsui.api import View, Group, Item, CheckListEditor, RangeEditor, EnumEditor
-import sys
+from traits.api import HasTraits, Any, Range, List, Enum, Float
+from traitsui.api import View, Group, Item, CheckListEditor, RangeEditor
 import time
+import argparse
 
-use_opengl = "opengl" in sys.argv
-use_mayavi = "mayavi" in sys.argv
-if not use_opengl and not use_mayavi:
-    use_mayavi = True
-assert use_opengl != use_mayavi
+parser = argparse.ArgumentParser(epilog=__doc__)
+group = parser.add_mutually_exclusive_group()
+group.add_argument("--mayavi", action="store_const", dest="visualizer",
+                   const="mayavi", help="MayaVi visualizer", default="mayavi")
+group.add_argument("--opengl", action="store_const", dest="visualizer",
+                   const="opengl", help="OpenGL visualizer")
+args = parser.parse_args()
+
+use_opengl = args.visualizer == "opengl"
+use_mayavi = args.visualizer == "mayavi"
 
 if use_mayavi:
     from espressomd.visualization_mayavi import mlab
@@ -43,10 +52,10 @@ if use_opengl:
 
 try:
     import midi
-except:
+except BaseException:
     try:
         from pygame import midi
-    except:
+    except BaseException:
         from portmidi import midi
 midi.init()
 
@@ -75,26 +84,23 @@ NPTInitPistonMass = NPTMinPistonMass
 box_l = 7.5395
 density = 0.7
 
-#global_boxlen = box_l
-#mainthread_boxlen = box_l
-
-# Interaction parameters (repulsive Lennard Jones)
+# Interaction parameters (repulsive Lennard-Jones)
 #############################################################
 
 lj_eps = 1.0
 lj_sig = 1.0
-lj_cut = 1.12246
+lj_cut = 2.5 * lj_sig
 lj_cap = 20
 
 # Integration parameters
 #############################################################
-system = espressomd.System(box_l=[1.0, 1.0, 1.0])
+system = espressomd.System(box_l=[box_l, box_l, box_l])
 system.set_random_state_PRNG()
 #system.seed = system.cell_system.get_state()['n_nodes'] * [1234]
 
 system.time_step = 0.01
 system.cell_system.skin = 0.4
-system.thermostat.set_langevin(kT=1.0, gamma=1.0)
+system.thermostat.set_langevin(kT=1.0, gamma=1.0, seed=42)
 
 system.cell_system.set_n_square(use_verlet_lists=False)
 
@@ -113,8 +119,6 @@ int_n_times = 5000000
 # Interaction setup
 #############################################################
 
-system.box_l = [box_l, box_l, box_l]
-
 system.non_bonded_inter[0, 0].lennard_jones.set_params(
     epsilon=lj_eps, sigma=lj_sig,
     cutoff=lj_cut, shift="auto")
@@ -123,7 +127,7 @@ system.force_cap = lj_cap
 # Particle setup
 #############################################################
 
-volume = box_l * box_l * box_l
+volume = box_l**3
 n_part = int(volume * density)
 
 for i in range(n_part):
@@ -132,7 +136,6 @@ for i in range(n_part):
 system.analysis.dist_to(0)
 
 act_min_dist = system.analysis.min_dist()
-system.cell_system.max_num_cells = 2744
 
 if use_mayavi:
     vis = visualization.mayaviLive(system)
@@ -166,21 +169,25 @@ class Controls(HasTraits):
         default_input = inputs
 
     for i in inputs:
-        if not "Through Port" in i[1]:
+        if "Through Port" not in i[1]:
             default_input = i
             break
 
-    default_input = default_input if len(inputs) > 0 else None
+    default_input = default_input if inputs else None
 
     default_output = -1
+    through_port_output = None
     for i in outputs:
-        if not "Through Port" in i[1]:
+        if "Through Port" not in i[1]:
             default_output = i
             break
         else:
             through_port_output = i
     default_output = default_output if len(
         outputs) > 1 else through_port_output
+
+    if default_input is None or default_output is None:
+        print('Cannot connect to any MIDI device')
 
     input_device = List(value=default_input,
                         editor=CheckListEditor(values=inputs))
@@ -258,7 +265,7 @@ class Controls(HasTraits):
     def _input_device_fired(self):
         if self.midi_input is not None:
             self.midi_input.close()
-        if len(self.input_device) > 0:
+        if self.input_device:
             self.midi_input = midi.Input(self.input_device[0])
 
     def _output_device_fired(self):
@@ -277,8 +284,8 @@ class Controls(HasTraits):
 
     def _volume_fired(self):
         status = self.MIDI_NUM_VOLUME
-        data1 = limit_range(int((system.box_l[0]**3. - self.min_vol) /
-                                (self.max_vol - self.min_vol) * 127), minval=0, maxval=127)
+        data1 = limit_range(int((system.box_l[0]**3. - self.min_vol) / (
+            self.max_vol - self.min_vol) * 127), minval=0, maxval=127)
         data2 = data1
 
         if self.midi_output is not None:
@@ -288,11 +295,17 @@ class Controls(HasTraits):
         status = self.MIDI_NUM_PRESSURE
 
         if pressure_log_flag:
-            data1 = limit_range(int(127 * (np.log(self.pressure) - np.log(self.min_press)) / (
-                np.log(self.max_press) - np.log(self.min_press))), minval=0, maxval=127)
+            data1 = limit_range(int(127 *
+                                    (np.log(self.pressure) -
+                                     np.log(self.min_press)) /
+                                    (np.log(self.max_press) -
+                                        np.log(self.min_press))), minval=0, maxval=127)
         else:
-            data1 = limit_range(int((self.pressure - self.min_press) /
-                                    (self.max_press - self.min_press) * 127), minval=0, maxval=127)
+            data1 = limit_range(int((self.pressure -
+                                     self.min_press) /
+                                    (self.max_press -
+                                     self.min_press) *
+                                    127), minval=0, maxval=127)
         data2 = data1
         if self.midi_output is not None:
             self.midi_output.write_short(status, data1, data2)
@@ -316,6 +329,7 @@ class Controls(HasTraits):
 #############################################################
 #      Integration                                          #
 #############################################################
+
 
 # get initial observables
 pressure = system.analysis.pressure()
@@ -385,7 +399,7 @@ def pressure_from_midi_val(midi_val, pmin, pmax, log_flag=pressure_log_flag):
     if log_flag:
         return pmin * (float(pmax) / pmin)**(float(midi_val) / 127)
     else:
-        return (midi_val * (pmax - pmin) / 127 + pmin)
+        return midi_val * (pmax - pmin) / 127 + pmin
 
 
 def main_loop():
@@ -430,8 +444,8 @@ def main_loop():
         newVkappa = system.analysis.v_kappa('read')['Vk1']
         newVkappa = newVkappa if newVkappa > 0. else 4.0 / \
             (NPTGamma0 * NPTGamma0 * NPTInitPistonMass)
-        pistonMass = limit_range(
-            4.0 / (NPTGamma0 * NPTGamma0 * newVkappa), NPTMinPistonMass, NPTMaxPistonMass)
+        pistonMass = limit_range(4.0 / (NPTGamma0 * NPTGamma0 * newVkappa),
+                                 NPTMinPistonMass, NPTMaxPistonMass)
         system.integrator.set_isotropic_npt(
             controls.pressure, pistonMass, cubic_box=True)
 
@@ -444,8 +458,8 @@ def main_loop():
         new_box = np.ones(3) * controls.volume**(1. / 3.)
         if np.any(np.array(system.box_l) != new_box):
             for i in range(len(system.part)):
-                system.part[i].pos = system.part[
-                    i].pos * new_box / system.box_l[0]
+                system.part[i].pos = system.part[i].pos * \
+                    new_box / system.box_l[0]
             print("volume changed")
             system.force_cap = lj_cap
         system.box_l = new_box
@@ -468,8 +482,9 @@ def main_loop():
 
     plt1_x_data = np.append(
         plt1_x_data[-plot_max_data_len + 1:], system.time)
-    plt1_y_data = np.append(plt1_y_data[-plot_max_data_len + 1:], 2. / (
-        3. * len(system.part)) * system.analysis.energy()["kinetic"])
+    plt1_y_data = np.append(plt1_y_data[-plot_max_data_len + 1:],
+                            2. / (3. * len(system.part))
+                            * system.analysis.energy()["kinetic"])
     plt2_x_data = np.append(
         plt2_x_data[-plot_max_data_len + 1:], system.time)
     plt2_y_data = np.append(
@@ -477,7 +492,7 @@ def main_loop():
 
 
 def main_thread():
-    for i in range(0, int_n_times):
+    for _ in range(int_n_times):
         main_loop()
 
 
@@ -488,7 +503,7 @@ def midi_thread():
             if controls.midi_input is not None and controls.midi_input.poll():
                 events = controls.midi_input.read(1000)
                 for event in events:
-                    status, data1, data2, data3 = event[0]
+                    status, data1, data2, _ = event[0]
                     if status == controls.MIDI_NUM_TEMPERATURE:
                         temperature = data2 * \
                             (controls.max_temp - controls.min_temp) / \
@@ -551,7 +566,9 @@ def rotate_scene():
         else:
             current_view_vals = mlab.view()
             mlab.view(azimuth=mayavi_rotation_angle,
-                      elevation=current_view_vals[1], distance=current_view_vals[2], focalpoint=current_view_vals[3])
+                      elevation=current_view_vals[1],
+                      distance=current_view_vals[2],
+                      focalpoint=current_view_vals[3])
     mayavi_rotation_angle %= 360.
 
 
@@ -576,15 +593,15 @@ def update_plot():
     # rotate_scene()
     zoom_scene()
 
-    data_len = np.array([len(plt1_x_data), len(
-        plt1_y_data), len(plt2_x_data), len(plt2_y_data)]).min()
+    data_len = np.array([len(plt1_x_data), len(plt1_y_data),
+                         len(plt2_x_data), len(plt2_y_data)]).min()
     plot1.set_xdata(plt1_x_data[:data_len])
     plot1.set_ydata(plt1_y_data[:data_len])
     plot2.set_xdata(plt2_x_data[:data_len])
     plot2.set_ydata(plt2_y_data[:data_len])
 
     cursor.set_offsets([plt1_y_data[data_len - 1], plt2_y_data[data_len - 1]])
-#    cursor2.set_offsets([controls.temperature, controls.pressure])
+    # cursor2.set_offsets([controls.temperature, controls.pressure])
 
     current_time = plot1.get_xdata()[-1]
     if last_plotted == current_time:

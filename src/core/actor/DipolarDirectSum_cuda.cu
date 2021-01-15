@@ -1,8 +1,26 @@
+/*
+ * Copyright (C) 2010-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+#include "cuda_wrapper.hpp"
 
 #include "config.hpp"
-#include "cuda.h"
-#include "thrust/device_ptr.h"
-#include "thrust/reduce.h"
+#include <thrust/device_ptr.h>
+#include <thrust/reduce.h>
 
 #ifdef DIPOLAR_DIRECT_SUM
 
@@ -25,9 +43,7 @@ __device__ inline void get_mi_vector_dds(dds_float res[3], dds_float a[3],
 
   for (i = 0; i < 3; i++) {
     res[i] = a[i] - b[i];
-#ifdef PARTIAL_PERIODIC
     if (periodic[i])
-#endif
       res[i] -= floor(res[i] / box_l[i] + 0.5) * box_l[i];
   }
 }
@@ -248,7 +264,7 @@ __global__ void DipolarDirectSum_kernel_energy(dds_float pf, int n, float *pos,
 
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   dds_float sum = 0.0;
-  extern __shared__ dds_float res[];
+  HIP_DYNAMIC_SHARED(dds_float, res)
 
   // There is one thread per particle. Each thread computes interactions
   // with particles whose id is larger than the thread id.
@@ -305,8 +321,8 @@ void DipolarDirectSum_kernel_wrapper_force(dds_float k, int n, float *pos,
                            cudaMemcpyHostToDevice));
 
   // printf("box_l: %f %f %f\n",box_l[0],box_l[1],box_l[2]);
-  KERNELCALL(DipolarDirectSum_kernel_force, grid, block,
-             (k, n, pos, dip, f, torque, box_l_gpu, periodic_gpu));
+  KERNELCALL(DipolarDirectSum_kernel_force, grid, block, k, n, pos, dip, f,
+             torque, box_l_gpu, periodic_gpu);
   cudaFree(box_l_gpu);
   cudaFree(periodic_gpu);
 }
@@ -346,13 +362,13 @@ void DipolarDirectSum_kernel_wrapper_energy(dds_float k, int n, float *pos,
 
   // This will sum the energies up to the block level
   KERNELCALL_shared(DipolarDirectSum_kernel_energy, grid, block,
-                    bs * sizeof(dds_float),
-                    (k, n, pos, dip, box_l_gpu, periodic_gpu, energySum));
+                    bs * sizeof(dds_float), k, n, pos, dip, box_l_gpu,
+                    periodic_gpu, energySum);
 
   // printf(" Still here after energy kernel\n");
   // Sum the results of all blocks
   // One thread per block in the prev kernel
-  // KERNELCALL(sumKernel,1,1,(energySum,block.x,E));
+  // KERNELCALL(sumKernel,1,1,energySum,block.x,E);
   thrust::device_ptr<dds_float> t(energySum);
   float x = thrust::reduce(t, t + grid.x);
   cuda_safe_mem(cudaMemcpy(E, &x, sizeof(float), cudaMemcpyHostToDevice));

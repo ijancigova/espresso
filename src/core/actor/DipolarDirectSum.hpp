@@ -1,21 +1,21 @@
 /*
-Copyright (C) 2010-2018 The ESPResSo project
-
-This file is part of ESPResSo.
-
-ESPResSo is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-ESPResSo is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #include "config.hpp"
 
 #ifdef DIPOLAR_DIRECT_SUM
@@ -24,8 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "DipolarDirectSum_cuda.hpp"
 #include "SystemInterface.hpp"
 #include "cuda_interface.hpp"
+#include "electrostatics_magnetostatics/dipole.hpp"
 #include "grid.hpp"
-#include "interaction_data.hpp"
 
 #include <memory>
 
@@ -46,7 +46,7 @@ class DipolarDirectSum : public Actor {
 public:
   DipolarDirectSum(SystemInterface &s) {
 
-    k = coulomb.Dprefactor;
+    k = dipole.prefactor;
 
     if (!s.requestFGpu())
       std::cerr << "DipolarDirectSum needs access to forces on GPU!"
@@ -60,23 +60,23 @@ public:
       std::cerr << "DipolarDirectSum needs access to dipoles on GPU!"
                 << std::endl;
   };
-  void computeForces(SystemInterface &s) {
+  void computeForces(SystemInterface &s) override {
     dds_float box[3];
     int per[3];
     for (int i = 0; i < 3; i++) {
       box[i] = s.box()[i];
-      per[i] = (PERIODIC(i));
+      per[i] = (box_geo.periodic(i));
     }
     DipolarDirectSum_kernel_wrapper_force(k, s.npart_gpu(), s.rGpuBegin(),
                                           s.dipGpuBegin(), s.fGpuBegin(),
                                           s.torqueGpuBegin(), box, per);
   };
-  void computeEnergy(SystemInterface &s) {
+  void computeEnergy(SystemInterface &s) override {
     dds_float box[3];
     int per[3];
     for (int i = 0; i < 3; i++) {
       box[i] = s.box()[i];
-      per[i] = (PERIODIC(i));
+      per[i] = (box_geo.periodic(i));
     }
     DipolarDirectSum_kernel_wrapper_energy(
         k, s.npart_gpu(), s.rGpuBegin(), s.dipGpuBegin(), box, per,

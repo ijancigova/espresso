@@ -1,21 +1,21 @@
 /*
-Copyright (C) 2010-2018 The ESPResSo project
-
-This file is part of ESPResSo.
-
-ESPResSo is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-ESPResSo is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #include <boost/mpi.hpp>
 
 #define BOOST_TEST_NO_MAIN
@@ -23,11 +23,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define BOOST_TEST_ALTERNATIVE_INIT_API
 #define BOOST_TEST_DYN_LINK
 #include <boost/test/unit_test.hpp>
+#include <memory>
 
-#include "core/MpiCallbacks.hpp"
-#include "core/utils/make_unique.hpp"
+#include "MpiCallbacks.hpp"
 
-#include "../../script_interface/ParallelScriptInterface.hpp"
+#include "ParallelScriptInterface.hpp"
 
 namespace mpi = boost::mpi;
 std::unique_ptr<Communication::MpiCallbacks> callbacks;
@@ -36,7 +36,7 @@ using namespace ScriptInterface;
 
 struct TestClass : public ScriptInterfaceBase {
   TestClass() { constructed = true; }
-  ~TestClass() { destructed = true; }
+  ~TestClass() override { destructed = true; }
 
   void set_parameter(const std::string &name, const Variant &value) override {
     last_parameter = make_pair(name, value);
@@ -49,9 +49,8 @@ struct TestClass : public ScriptInterfaceBase {
   Variant get_parameter(std::string const &name) const override {
     if (name == "obj_param") {
       return obj_param->id();
-    } else {
-      return last_parameter.second;
     }
+    return last_parameter.second;
   }
 
   Variant call_method(const std::string &method,
@@ -75,7 +74,7 @@ bool TestClass::destructed = false;
 std::pair<std::string, VariantMap> TestClass::last_method_parameters;
 std::pair<std::string, Variant> TestClass::last_parameter;
 
-/**
+/*
  * Check that instances are created and correctly destroyed on
  * the slave nodes.
  */
@@ -100,7 +99,7 @@ BOOST_AUTO_TEST_CASE(ctor_dtor) {
   BOOST_CHECK(TestClass::destructed);
 }
 
-/**
+/*
  * Check that parameters are forwarded correctly.
  */
 BOOST_AUTO_TEST_CASE(set_parameter) {
@@ -174,9 +173,9 @@ BOOST_AUTO_TEST_CASE(parameter_lifetime) {
 }
 
 int main(int argc, char **argv) {
-  mpi::environment mpi_env;
+  mpi::environment mpi_env(argc, argv);
   mpi::communicator world;
-  callbacks = Utils::make_unique<Communication::MpiCallbacks>(
+  callbacks = std::make_unique<Communication::MpiCallbacks>(
       world, /* abort_on_exit */ false);
 
   ParallelScriptInterface::initialize(*callbacks);
